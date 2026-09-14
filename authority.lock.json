@@ -1,0 +1,226 @@
+{
+  "format_version": 1,
+  "lock_id": "sandbox-runtime-external-caller-authority-v1",
+  "source": {
+    "repository": "https://github.com/shell-echo/sandbox-runtime.git",
+    "revision": "9206e601f75a54db0b66969239d7e8cc5bcc8af9",
+    "contract_tree": "c5e4221f2ceaaaad53c8038e1ebaacfe0c5a4daf"
+  },
+  "contract": {
+    "namespace": "urn:shell-echo:sandbox-runtime:provider-v1",
+    "version": "1.0.0",
+    "manifest_digest": "sha256:23405c62747b6c678d2fcc84dfd885e435ab12771befdb29499b2e7367404da1",
+    "openapi_digest": "sha256:08261369d39bb6837759ab4b95f460df3b6c3feb51fbc56d38fe393ce69be2ca",
+    "semantic_rules_digest": "sha256:b9d3706db2d5c6fa0cfe4a389bb2ad4718daecca076d660c2e7985795e6c1999",
+    "local_suite": {
+      "suite_id": "sandbox-provider",
+      "suite_version": "1.0.0",
+      "suite_digest": "sha256:bf177a5bd2b4228605b3ebc311d25a1cc348d9548b2b5c2d333a0c69e71ca528",
+      "profile_id": "sandbox-runtime-provider-v1",
+      "case_count": 50
+    },
+    "remote_discovery_suite": {
+      "suite_id": "sandbox-provider-remote",
+      "suite_version": "1.0.0",
+      "suite_digest": "sha256:167922d972229a97a64bf22bc6a36ee20d4de19a023395d9f004f00c54cc49d0",
+      "profile_id": "sandbox-runtime-provider-remote-discovery-v1",
+      "case_count": 6
+    }
+  },
+  "qualification_profile": {
+    "profile_id": "sandbox-runtime-external-caller-coding-shell-v1",
+    "profile_version": "1.0.0",
+    "profile_digest": "sha256:baee769c0acc395448af61faef99cd97fbb63ccb83c70eb51915952be519991a",
+    "profile_digest_profile": "rfc8785-full-document-excluding-profile-digest-v1",
+    "schema_digest": "sha256:2ad01731b69246399d6f04048593f31da9e4118b1dff99a81551b0c9b5972d77",
+    "phases": [
+      {
+        "phase_id": "initial",
+        "case_ids": [
+          "initial.locked-capability-discovery",
+          "initial.protected-lifecycle-create",
+          "initial.replay-semantics",
+          "initial.lifecycle-completion-and-status",
+          "initial.exec-result-and-usage-evidence",
+          "initial.stale-fencing-rejection",
+          "initial.exec-cancellation",
+          "initial.terminal-session-and-opaque-handoff",
+          "initial.gateway-terminal-byte-round-trip",
+          "initial.gateway-wrong-caller-and-cross-tenant-rejection",
+          "initial.gateway-grant-expiry",
+          "initial.gateway-revocation",
+          "initial.artifact-staging-and-evidence",
+          "initial.provider-cross-tenant-artifact-rejection",
+          "initial.provider-mtls-caller-binding-rejection"
+        ]
+      },
+      {
+        "phase_id": "reconstruction",
+        "case_ids": [
+          "reconstruction.locked-capability-discovery",
+          "reconstruction.durable-lifecycle",
+          "reconstruction.retained-exec-usage-and-artifact-evidence",
+          "reconstruction.durable-opaque-handoff",
+          "reconstruction.same-shell-reconnect"
+        ]
+      }
+    ]
+  },
+  "adapter_protocol": {
+    "protocol_id": "sandbox-runtime-external-caller-adapter-v1",
+    "protocol_version": "1.0.0",
+    "schema_digest": "sha256:0c3783bb4014d1e04d61f1987fa77f0c27a158c65552704f69f3f340bbaa6b20",
+    "semantics_digest": "sha256:deeef0edf5cc63705d84e45a8f64f657e97346a3616259c2d8b718b1e38b0bd5",
+    "transcript_projection_schema_digest": "sha256:d2eb229f55528df8ba68426cc5b7da9d1bd6a78a412707d656b77c1effeff293"
+  },
+  "report_evidence": {
+    "report_schema_digest": "sha256:0fef4381588ace43c63ee6aaba0f9ddfa192af3c03353c1a13e00344bc416f3f",
+    "validator_semantics_digest": "sha256:2cccf9502c1521ee3afe35478b0359fa9cf03eda6ef5b0c5130ed8ff6fd8daf2"
+  },
+  "files": [
+    {
+      "path": "compatibility/sandbox-runtime/contract.lock.json",
+      "sha256": "sha256:01bf9bd536714d907e81610f8fa09d337bb59b239c0e155b9156b3128c718b80"
+    },
+    {
+      "path": "contract/compatibility/contract-manifest.json",
+      "sha256": "sha256:23405c62747b6c678d2fcc84dfd885e435ab12771befdb29499b2e7367404da1"
+    },
+    {
+      "path": "contract/openapi/sandbox-runtime-provider-v1.yaml",
+      "sha256": "sha256:08261369d39bb6837759ab4b95f460df3b6c3feb51fbc56d38fe393ce69be2ca"
+    },
+    {
+      "path": "contract/semantic-rules/provider-v1.json",
+      "sha256": "sha256:b9d3706db2d5c6fa0cfe4a389bb2ad4718daecca076d660c2e7985795e6c1999"
+    },
+    {
+      "path": "contract/specification/provider-calling-standard-v1.md",
+      "sha256": "sha256:06a5e9d9bbf59a36a1f9a85dcb9bf6039c8c64a20648dad1ea8591c2effd1bfe"
+    },
+    {
+      "path": "contract/schemas/provider-capabilities.schema.json",
+      "sha256": "sha256:1d4951b2d66a84f7fb1e80a4cc02c07634af7fa4d83d4ca577f7181387823023"
+    },
+    {
+      "path": "contract/schemas/capability.schema.json",
+      "sha256": "sha256:a66fb48afe6508c78437df347a76ab46ea1da093c6cc9a1d40da138e0cb7b4f5"
+    },
+    {
+      "path": "contract/schemas/runtime-profile.schema.json",
+      "sha256": "sha256:0b013d6851f539634273cea4b46e5a600def8ef7e08e1e0f2863c75614353788"
+    },
+    {
+      "path": "contract/schemas/snapshot-restore-profile.schema.json",
+      "sha256": "sha256:2bc1768be8d5ac2c368d07e4cdf2fe9b89ff32c4fc9a0fa0fdef51ba2f7e8495"
+    },
+    {
+      "path": "contract/schemas/provider-limits.schema.json",
+      "sha256": "sha256:4ee31efddb37183a0303743515f0c2a5f2395e173b27c6378d9dc04cb2e0678e"
+    },
+    {
+      "path": "contract/schemas/standard-error.schema.json",
+      "sha256": "sha256:11cac821b39ac1ff6d642fcad59e28450291a29ff78c8992b41cb17d1eb0f2f6"
+    },
+    {
+      "path": "contract/schemas/admission-context.schema.json",
+      "sha256": "sha256:f5c41e34fe2a09b010bf566faf425439bd3aedc0d0776cb90ff73a548f0fa448"
+    },
+    {
+      "path": "contract/schemas/admission-target.schema.json",
+      "sha256": "sha256:d72048ed29c2fddd95f81a50d3356b8197fa4c7dddd09cd9fa988124ef9e3b30"
+    },
+    {
+      "path": "contract/schemas/protected-operation-jws-header.schema.json",
+      "sha256": "sha256:9b6f1a772544a7408476e5e2f66362a9a90ed92ebf6b1ca9f663a9199080e43b"
+    },
+    {
+      "path": "contract/schemas/protected-operation-jws-claims.schema.json",
+      "sha256": "sha256:fa2d93a29a420e0cd8dd5357961fcbba4170c514cee0786bbcbabe32184f8e40"
+    },
+    {
+      "path": "contract/schemas/create-sandbox-request.schema.json",
+      "sha256": "sha256:7453f05f84ac47cffaa50859c91caacc15dd525931913a493c60c67c3c151e77"
+    },
+    {
+      "path": "contract/schemas/provider-operation.schema.json",
+      "sha256": "sha256:854399fbbf449e03cad8a3171eec820efdf8a4160db28a29440557d06fbe6dfa"
+    },
+    {
+      "path": "contract/schemas/provider-error.schema.json",
+      "sha256": "sha256:83c31a3f332c8e6a3451f0c0f99d20c6e8251a973bb44d4fe095a2726a34383d"
+    },
+    {
+      "path": "contract/schemas/sandbox-status.schema.json",
+      "sha256": "sha256:72894c19c901f9d9fafeb14f6e43d674c4831b7868e2825e6393247d7e17522b"
+    },
+    {
+      "path": "contract/fixtures/capabilities-coding-shell.json",
+      "sha256": "sha256:819087a2e25c62db2e23614b067c3393fed7f46200a2884231253e79d3cd5334"
+    },
+    {
+      "path": "contract/fixtures/create-sandbox-request.json",
+      "sha256": "sha256:a8be96dbf215f75ed9ce0f4ebbab2f41bb95e923ef3b6831a6cd8336a7691ed6"
+    },
+    {
+      "path": "contract/fixtures/provider-operation.json",
+      "sha256": "sha256:3b555248407c7e8dd7f6b593218801cf1f00eb9c259b0afbcaa8374fe9ca1fd1"
+    },
+    {
+      "path": "contract/fixtures/sandbox-status.json",
+      "sha256": "sha256:8bb8ee036f60ea463a891106e8666a80b3a44a43940f84a94b7bd7bb7df35871"
+    },
+    {
+      "path": "contract/fixtures/standard-error.json",
+      "sha256": "sha256:2cc9131757e5032076d590bb1519dca9686b43deed9d775e2db1523db63230ca"
+    },
+    {
+      "path": "contract/fixtures/admission-context.json",
+      "sha256": "sha256:3a7f99f7f7352fba06cb0b03519ae5f79ae0c966343ecf47b9913980a47d5bb8"
+    },
+    {
+      "path": "contract/fixtures/protected-admission-jws-profile.json",
+      "sha256": "sha256:4e4df019be0be8e512671e0482931f51846e4d154daa497caed9cfdef176d68f"
+    },
+    {
+      "path": "contract/fixtures/artifact-usage-admission-bindings.json",
+      "sha256": "sha256:45b43ed9f74fe30abde6542082adca13f21cbd8af5ba59e34d3878bb5a8385a7"
+    },
+    {
+      "path": "contract/conformance/provider-v1/suite.json",
+      "sha256": "sha256:32862a8a7f8d8e9d7b08efc95042dd6814d62e8826a5396aca594a6631a2e4ac"
+    },
+    {
+      "path": "contract/conformance/provider-remote-v1/suite.json",
+      "sha256": "sha256:4d07fcf48d729c465012fbf988713eb0a3241c4e4dbc8cf0033b553b02c1a492"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/profile.json",
+      "sha256": "sha256:7e7f5903264f81c801c4f8b21eb0fd16bd0152dafeeee2d6d8af7b82f7af44e0"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/profile.schema.json",
+      "sha256": "sha256:2ad01731b69246399d6f04048593f31da9e4118b1dff99a81551b0c9b5972d77"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/adapter-protocol.schema.json",
+      "sha256": "sha256:0c3783bb4014d1e04d61f1987fa77f0c27a158c65552704f69f3f340bbaa6b20"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/adapter-protocol.semantics.json",
+      "sha256": "sha256:deeef0edf5cc63705d84e45a8f64f657e97346a3616259c2d8b718b1e38b0bd5"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/adapter-transcript.schema.json",
+      "sha256": "sha256:d2eb229f55528df8ba68426cc5b7da9d1bd6a78a412707d656b77c1effeff293"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/report.schema.json",
+      "sha256": "sha256:0fef4381588ace43c63ee6aaba0f9ddfa192af3c03353c1a13e00344bc416f3f"
+    },
+    {
+      "path": "qualification/external-caller-coding-shell-v1/validator.semantics.json",
+      "sha256": "sha256:2cccf9502c1521ee3afe35478b0359fa9cf03eda6ef5b0c5130ed8ff6fd8daf2"
+    }
+  ]
+}

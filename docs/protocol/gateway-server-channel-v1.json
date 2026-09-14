@@ -1,0 +1,7 @@
+{
+  "channel_id": "gateway-server",
+  "role": "gateway_credentials",
+  "actor": null,
+  "media_type": "application/vnd.shell-echo.sandbox-gateway-server-credentials-v1+json",
+  "max_bytes": 262144
+}
