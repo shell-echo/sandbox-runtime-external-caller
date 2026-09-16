@@ -6,9 +6,10 @@ use generated code from the locked public Contract, but it must not import or
 copy Provider implementation packages or either repository's reference E2E
 caller.
 
-The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 9 of 13
-checkpoints are complete; 4 remain. Checkpoint e1.7b is complete as local
-candidate composition with all 5 reconstruction cases locally composed.
+The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 10 of 13
+checkpoints are complete; 3 remain. Checkpoint e1.8a is in progress: local
+reproducibility and a private hosted build are established, while independent
+attestation remains blocked by repository visibility/account capability.
 
 The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -336,11 +337,13 @@ the authority lock, source archive, exact Go toolchain and build commands, and
 all raw executable digests; a strict verifier detects retained-byte changes.
 See [`docs/release-artifacts.md`](docs/release-artifacts.md).
 
-That manifest is intentionally marked qualification-ineligible. A private
-source repository and commit-pinned hosted workflow are now defined, but only a
-pushed exact revision plus a successful independent build/attestation can close
-the final e1.8a provenance gate. Qualification supervisor observation remains a
-later external gate and cannot be self-certified by this candidate.
+That manifest is intentionally marked qualification-ineligible. Private hosted
+run `35067554697` built and uploaded the exact `32bfb5fd...` Linux/amd64 bundle,
+which was downloaded and passed the strict verifier. GitHub then rejected the
+attestation because user-owned private repositories do not support that
+feature. The final e1.8a provenance gate therefore remains open until the
+repository is explicitly made public (or an equivalent independent attestor is
+provided). Qualification supervisor observation remains a later external gate.
 
 ## Verify the locked inputs
 

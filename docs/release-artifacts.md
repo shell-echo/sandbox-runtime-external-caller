@@ -96,3 +96,11 @@ bundle without compression, and requests one GitHub/Sigstore attestation over
 the source archive, manifest and all three executables. A successful run and
 subsequent `gh attestation verify` are required before the external provenance
 gate can be closed; workflow definition alone is not evidence.
+
+Private hosted run `35067554697` proves the workflow through source verification,
+bundle build/verification, locked-authority verification and artifact upload for
+source `32bfb5fd786228769742cd90db9cb18f127edf6f`. Its downloaded artifact also
+passes this tool's strict verifier. The attestation action then failed closed
+because GitHub does not offer attestations for user-owned private repositories.
+That partial run is hosted-build evidence, not an attestation and not completion
+of e1.8a.

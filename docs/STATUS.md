@@ -1,15 +1,11 @@
 # Status
 
-Current checkpoint: **e1.7b complete as local candidate composition; all 5
-locked reconstruction cases are locally composed**. All 15 initial cases remain
-complete locally. A fresh
-reconstruction command path rediscovers the exact retained capability snapshot,
-reconciles the retained create operation and generation-one ready sandbox, then
-matches the retained exec, usage and artifact documents to the three Caller
-digests, validates the retained terminal handoff, and reconnects through the
-reconstructed Gateway while leaving state at `initial_complete` revision six.
-Of the 13 checkpoints in [`PLAN.md`](PLAN.md), 9 are complete and **4 remain**. Sections
-below record evidence at each checkpoint, not simultaneous current claims.
+Current checkpoint: **e1.8a in progress**. The deterministic local release
+bundle and a private GitHub-hosted Linux/amd64 build are complete. Formal build
+attestation remains blocked because GitHub does not support attestations for a
+user-owned private repository. Of the 13 checkpoints in [`PLAN.md`](PLAN.md),
+10 are complete and **3 remain**. Sections below record evidence at each
+checkpoint, not simultaneous current claims.
 
 Current pinned authority: Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -1559,12 +1555,30 @@ The provenance boundary is deliberately not closed. The manifest says
 `candidate-local-reproducibility-only`, `qualification_eligible: false`, and
 records no independent source-hosting/build attestation or process-supervisor
 observation. A private `shell-echo/sandbox-runtime-external-caller` repository
-and commit-pinned hosted workflow are now defined, but the exact candidate
-revision has not yet been pushed or built there. Candidate code cannot
-independently attest its own owner or build. Closing the final third of e1.8a
-therefore still requires the successful hosted build and attestation evidence.
+and commit-pinned hosted workflow are defined. Source revision
+`32bfb5fd786228769742cd90db9cb18f127edf6f` was pushed and hosted run
+`35067554697` completed the full serialized race/shuffle suite, vet, deterministic
+Linux/amd64 build, strict bundle verification, public authority checkout and
+digest verification, and artifact upload. The downloaded artifact passed the
+local strict verifier with manifest digest
+`sha256:5e11550fe9f69f4770386237a98a438c459390549211d776e2de8ee0cbd34b06`.
 
-Next required step: obtain independent source hosting and build provenance for
-the exact content-addressed source snapshot and match the three observed raw
-artifact digests. **Three large checkpoints and six merged execution steps
-remain; e1.8a is 2/3 complete.**
+Artifact `10435176113` has archive digest
+`sha256:a9026a602ac2f1d18cf8ddd832d75f269d5bcf9455bcdd11154661d7df75aab0`
+and expires on 2026-10-16. Its source archive/source identity is
+`sha256:0100134da1680da8c101d9a7b8944d8c1a1b51317d255037452b6305f6bf283d`;
+the qualification-adapter, external-caller and caller-gateway raw digests are
+respectively `sha256:92726c7d534df6f7a5079d68473becc6a2254ef28b12b9e31ee1c742252b7c96`,
+`sha256:82249d2f1d0162756bf6fda76231eb95d2d0972e8f3e929453a8cbf9cb157caf`,
+and `sha256:fb19d045119c8971cd3696496df41d65b8213a4b3889b81f103fe6edd84ad5fd`.
+
+The final attestation step failed closed with GitHub's explicit
+`Feature not available for user-owned private repositories` response. No
+attestation was created, so candidate code cannot claim independent build
+provenance and e1.8a is not complete. Repository visibility will not be changed
+without explicit authorization.
+
+Next required step: explicitly authorize public repository visibility (or name
+an equivalent independent attestor), then rerun and verify the attestation over
+the exact hosted bytes. **Three large checkpoints and six merged execution
+steps remain; e1.8a is not yet complete.**

@@ -18,7 +18,7 @@ be explained explicitly instead of silently resetting the count.
 | 8 | e1.7a | All 15 locked initial cases with truthful interactions, assertions and observation references | Complete (local synthetic/process composition) |
 | 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Complete (local synthetic/process composition) |
 | 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Complete (candidate process closure; operator cleanup still external) |
-| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | In progress (2/3: local bundle complete; independent provenance pending) |
+| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | In progress (hosted build complete; private-repository attestation blocked) |
 | 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending |
 | 13 | e1.8c | Closed report, receipt, independent validation and final qualification disposition | Pending |
 
@@ -79,12 +79,13 @@ Checkpoint 11 now has a deterministic source archive, source-archive-derived
 immutable startup identity, exact toolchain/command/environment recording,
 two independent archive extractions and byte-identical rebuild enforcement,
 three raw executable digests, a canonical self-digesting manifest and strict
-retained-byte verifier. The manifest is deliberately qualification-ineligible
-and states that independent source hosting, build attestation and process
-supervisor observation are absent. Because the current worktree is uncommitted
-and has no configured remote, the final provenance third of this checkpoint
-requires separate commit/publication/hosted-build authorization and cannot be
-self-certified by candidate code.
+retained-byte verifier. Exact source has been published to a private repository;
+hosted run `35067554697` passed tests, build, authority verification, upload and
+downloaded-byte verification for revision `32bfb5fd...`. The manifest remains
+qualification-ineligible and no attestation exists: GitHub rejected attestation
+for a user-owned private repository. Closing the final provenance third requires
+explicit public visibility (or an equivalent independent attestor) and a
+verified attestation; it cannot be self-certified by candidate code.
 
 Checkpoint 1 corrects an earlier premise: the public adapter protocol allows
 up to eight channels; the former seven were candidate-specific. The eighth
