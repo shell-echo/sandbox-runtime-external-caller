@@ -369,55 +369,89 @@ func (session *Session) abort(fallback error) error {
 
 func (session *Session) waitAndDrain(graceful bool) (error, drainResult, drainResult, error) {
 	stdoutResult := make(chan drainResult, 1)
-	waitResult := make(chan error, 1)
 	go func() { stdoutResult <- drainBounded(session.stdout, scenariocontrol.MaxResultBytes) }()
-	go func() { waitResult <- session.command.Wait() }()
 
 	started := time.Now()
-	var waitErr error
-	waited := false
+	deadline := started.Add(processReapLimit)
+	graceDeadline := started.Add(gracefulExitWait)
+	if graceDeadline.After(deadline) {
+		graceDeadline = deadline
+	}
+
+	var remainder, stderr drainResult
+	stdoutDone, stderrDone := false, false
+	collect := func(before time.Time) {
+		if !stdoutDone {
+			remainder, stdoutDone = receiveDrainBefore(stdoutResult, before)
+		}
+		if !stderrDone {
+			stderr, stderrDone = receiveDrainBefore(session.stderr, before)
+		}
+	}
+
+	cancelled := !graceful
 	if graceful {
-		timer := time.NewTimer(gracefulExitWait)
-		select {
-		case waitErr = <-waitResult:
-			waited = true
-			timer.Stop()
-		case <-timer.C:
+		collect(graceDeadline)
+		if !stdoutDone || !stderrDone {
+			cancelled = true
 			session.cancel()
+			_ = terminateProcessGroup(session.command.Process)
 		}
 	} else {
 		session.cancel()
+		_ = terminateProcessGroup(session.command.Process)
 	}
-	deadline := started.Add(processReapLimit)
+	collect(deadline)
+	if !stdoutDone || !stderrDone {
+		_ = terminateProcessGroup(session.command.Process)
+		return nil, remainder, stderr, ErrProcessCleanup
+	}
+
+	// os/exec requires every StdoutPipe/StderrPipe read to finish before Wait.
+	// Waiting first races Wait's pipe close against the drains on Linux.
+	waitResult := make(chan error, 1)
+	go func() { waitResult <- session.command.Wait() }()
+	waitErr, waited := receiveWaitBefore(waitResult, func() time.Time {
+		if graceful && !cancelled {
+			return graceDeadline
+		}
+		return deadline
+	}())
+	if !waited && graceful && !cancelled {
+		session.cancel()
+		_ = terminateProcessGroup(session.command.Process)
+		waitErr, waited = receiveWaitBefore(waitResult, deadline)
+	}
 	if !waited {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			_ = terminateProcessGroup(session.command.Process)
-			return nil, drainResult{}, drainResult{}, ErrProcessCleanup
-		}
-		timer := time.NewTimer(remaining)
-		select {
-		case waitErr = <-waitResult:
-			timer.Stop()
-		case <-timer.C:
-			_ = terminateProcessGroup(session.command.Process)
-			return nil, drainResult{}, drainResult{}, ErrProcessCleanup
-		}
+		_ = terminateProcessGroup(session.command.Process)
+		return nil, remainder, stderr, ErrProcessCleanup
 	}
 	// The caller has its own process group. Even after the direct child exits,
 	// kill any straggling descendants before accepting EOF and cleanup success.
 	if err := terminateProcessGroup(session.command.Process); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		return waitErr, drainResult{}, drainResult{}, ErrProcessCleanup
-	}
-	remainder, ok := receiveDrainBefore(stdoutResult, deadline)
-	if !ok {
-		return waitErr, drainResult{}, drainResult{}, ErrProcessCleanup
-	}
-	stderr, ok := receiveDrainBefore(session.stderr, deadline)
-	if !ok {
-		return waitErr, remainder, drainResult{}, ErrProcessCleanup
+		return waitErr, remainder, stderr, ErrProcessCleanup
 	}
 	return waitErr, remainder, stderr, nil
+}
+
+func receiveWaitBefore(channel <-chan error, deadline time.Time) (error, bool) {
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		select {
+		case result := <-channel:
+			return result, true
+		default:
+			return nil, false
+		}
+	}
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case result := <-channel:
+		return result, true
+	case <-timer.C:
+		return nil, false
+	}
 }
 
 func receiveDrainBefore(channel <-chan drainResult, deadline time.Time) (drainResult, bool) {

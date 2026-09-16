@@ -176,10 +176,13 @@ func (runner *Runner) Run(parent context.Context, phase, endpoint string, bundle
 	if writeErr != nil {
 		cancel()
 	}
-	waitErr := command.Wait()
-	close(stopClose)
+	// StdoutPipe and StderrPipe require their reads to finish before Wait.
+	// Calling Wait concurrently can close either pipe before the drain observes
+	// EOF, which turns a clean child exit into a platform-dependent I/O error.
 	stdoutBytes := <-stdoutResult
 	stderrBytes := <-stderrResult
+	waitErr := command.Wait()
+	close(stopClose)
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return ErrProcessTimeout
 	}
