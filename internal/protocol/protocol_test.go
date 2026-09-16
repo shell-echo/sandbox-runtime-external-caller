@@ -23,7 +23,7 @@ func TestProtocolConstantsMatchAuthorityLock(t *testing.T) {
 	if err := json.Unmarshal(document, &lock); err != nil {
 		t.Fatal(err)
 	}
-	if lock.Source.Revision != ContractRevision || lock.Source.ContractTree != ContractTree ||
+	if lock.Source.Revision != AuthorityRevision || lock.Source.ContractTree != ContractTree ||
 		lock.Contract.Namespace != "urn:shell-echo:sandbox-runtime:provider-v1" || lock.Contract.Version != "1.0.0" ||
 		lock.QualificationProfile.ProfileID != ProfileID || lock.QualificationProfile.ProfileVersion != ProfileVersion || lock.QualificationProfile.ProfileDigest != ProfileDigest ||
 		lock.AdapterProtocol.ProtocolID != ProtocolID || lock.AdapterProtocol.ProtocolVersion != ProtocolVersion || lock.AdapterProtocol.SchemaDigest != ProtocolSchemaDigest || lock.AdapterProtocol.SemanticsDigest != ProtocolSemanticsDigest {

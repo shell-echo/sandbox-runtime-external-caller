@@ -3,7 +3,7 @@
   "lock_id": "sandbox-runtime-external-caller-authority-v1",
   "source": {
     "repository": "https://github.com/shell-echo/sandbox-runtime.git",
-    "revision": "22ba6987ea5fbc37d53942720133c0acad199edd",
+    "revision": "96ee9933fe2a3bcfaef291b486cd6b8f7095539a",
     "contract_tree": "c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38"
   },
   "contract": {

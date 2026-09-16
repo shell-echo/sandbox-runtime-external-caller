@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: shell-echo/sandbox-runtime
-          ref: 22ba6987ea5fbc37d53942720133c0acad199edd
+          ref: 96ee9933fe2a3bcfaef291b486cd6b8f7095539a
           path: provider-source
           persist-credentials: false
 

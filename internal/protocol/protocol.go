@@ -17,6 +17,7 @@ const (
 
 	ProtocolSchemaDigest    = "sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969"
 	ProtocolSemanticsDigest = "sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662"
+	AuthorityRevision       = "96ee9933fe2a3bcfaef291b486cd6b8f7095539a"
 	ContractRevision        = "22ba6987ea5fbc37d53942720133c0acad199edd"
 	ContractTree            = "c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38"
 	ProfileID               = "sandbox-runtime-external-caller-coding-shell-v1"

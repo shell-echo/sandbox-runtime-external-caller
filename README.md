@@ -13,11 +13,12 @@ candidate composition with all 5 reconstruction cases locally composed.
 The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
 `c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38`, the 53-case local Suite, and the
-refreshed P2.7 profile/report/protocol authorities. The raw
+refreshed P2.7 profile/report/protocol authorities from public authority
+snapshot `96ee9933fe2a3bcfaef291b486cd6b8f7095539a`. The raw
 `authority.lock.json` digest is
-`sha256:5916b07719cc9320a021bbc96669f4a0c0a1d50a8301e9ab69f9fa248cdc03cf`.
-This refresh is currently uncommitted candidate state, not release provenance
-or a qualification result.
+`sha256:e39a5f9bd3e237a94c70cef0801dd2a4f32e3b188e46bc408938c1e34f38a595`.
+These committed authorities are inputs to release provenance, not a
+qualification result.
 
 ## Current scope
 

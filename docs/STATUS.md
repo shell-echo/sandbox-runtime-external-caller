@@ -21,11 +21,12 @@ validator semantics `sha256:c724eaa9f3b52e1a5ba4aa5aaeb5e8b61a744818b2f56fd8ff52
 adapter schema `sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969`,
 and adapter semantics
 `sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662`.
+The public authority snapshot containing those qualification authorities is
+`96ee9933fe2a3bcfaef291b486cd6b8f7095539a`.
 The raw authority-lock digest is
-`sha256:5916b07719cc9320a021bbc96669f4a0c0a1d50a8301e9ab69f9fa248cdc03cf`.
-The authority verifier passes against the adjacent Provider source; the refresh
-is uncommitted candidate state and provides no source/build provenance or
-qualification result.
+`sha256:e39a5f9bd3e237a94c70cef0801dd2a4f32e3b188e46bc408938c1e34f38a595`.
+The authority verifier passes against that committed snapshot. This establishes
+the input boundary, not a qualification result.
 
 ## e1.1 external-caller candidate foundation
 
