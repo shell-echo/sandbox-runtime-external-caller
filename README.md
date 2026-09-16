@@ -6,10 +6,10 @@ use generated code from the locked public Contract, but it must not import or
 copy Provider implementation packages or either repository's reference E2E
 caller.
 
-The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 10 of 13
-checkpoints are complete; 3 remain. Checkpoint e1.8a is in progress: local
-reproducibility and a private hosted build are established, while independent
-attestation remains blocked by repository visibility/account capability.
+The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 11 of 13
+checkpoints are complete; 2 remain. Checkpoint e1.8a is complete with public
+source hosting, a GitHub-hosted reproducible build, a five-subject Sigstore
+attestation and independent verification of every retained subject.
 
 The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -337,13 +337,13 @@ the authority lock, source archive, exact Go toolchain and build commands, and
 all raw executable digests; a strict verifier detects retained-byte changes.
 See [`docs/release-artifacts.md`](docs/release-artifacts.md).
 
-That manifest is intentionally marked qualification-ineligible. Private hosted
-run `35067554697` built and uploaded the exact `32bfb5fd...` Linux/amd64 bundle,
-which was downloaded and passed the strict verifier. GitHub then rejected the
-attestation because user-owned private repositories do not support that
-feature. The final e1.8a provenance gate therefore remains open until the
-repository is explicitly made public (or an equivalent independent attestor is
-provided). Qualification supervisor observation remains a later external gate.
+That manifest remains intentionally marked qualification-ineligible because a
+candidate cannot self-certify external evidence. Public hosted run
+`35068957048` built and uploaded the exact `58a211f0...` Linux/amd64 bundle and
+created Sigstore/Rekor attestation `47846951` over its source archive, manifest
+and three executables. The downloaded bundle passed the strict verifier and all
+five `gh attestation verify` checks. Qualification supervisor observation
+remains the separate e1.8b/e1.8c gate.
 
 ## Verify the locked inputs
 

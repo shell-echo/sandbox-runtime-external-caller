@@ -74,14 +74,11 @@ The manifest deliberately records:
 - `qualification_eligible: false`.
 
 The implementation began as an uncommitted worktree without a source remote, so
-its local bundle alone remains an exact content-addressed candidate snapshot,
-not proof of external ownership. A private source boundary now exists at
-`shell-echo/sandbox-runtime-external-caller`, together with the hosted workflow
-below. Completing e1.8a still requires pushing the exact source revision and a
-successful independent build/attestation whose observed artifact digests match
-this format. The operator must then supply those facts through the locked
-artifact-observation boundary. The candidate must not change the local manifest
-flags to manufacture that evidence.
+its local bundle alone was only an exact content-addressed candidate snapshot.
+The source repository is now public and the hosted workflow below supplies the
+external build/attestation observations. The candidate manifest deliberately
+retains its conservative flags; external evidence is not manufactured by
+changing candidate-controlled bytes.
 
 The repository also defines
 `.github/workflows/release-provenance.yml`. It uses commit-pinned checkout,
@@ -104,3 +101,12 @@ passes this tool's strict verifier. The attestation action then failed closed
 because GitHub does not offer attestations for user-owned private repositories.
 That partial run is hosted-build evidence, not an attestation and not completion
 of e1.8a.
+
+After explicit public-visibility authorization, hosted run `35068957048`
+completed every step for source `58a211f0c167af3ec117c8cb8247bfe268bbae40`.
+It uploaded artifact `10435915145`, created Public Good Sigstore/Rekor
+attestation `47846951` over the source archive, manifest and three executables,
+and published the immutable references. The downloaded bundle passed `-verify`,
+and all five subjects separately passed `gh attestation verify`. Those external
+observations close e1.8a; they do not establish the later supervisor/runtime
+qualification evidence.

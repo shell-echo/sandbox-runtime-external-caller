@@ -18,15 +18,13 @@ be explained explicitly instead of silently resetting the count.
 | 8 | e1.7a | All 15 locked initial cases with truthful interactions, assertions and observation references | Complete (local synthetic/process composition) |
 | 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Complete (local synthetic/process composition) |
 | 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Complete (candidate process closure; operator cleanup still external) |
-| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | In progress (hosted build complete; private-repository attestation blocked) |
+| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | Complete (public hosted build and five-subject attestation verified) |
 | 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending |
 | 13 | e1.8c | Closed report, receipt, independent validation and final qualification disposition | Pending |
 
-After the local portion of checkpoint 11, **3 checkpoints remain** across two
-stages: the independent provenance gate in 11, and independent qualification
-(12-13). They comprise six merged execution steps: one for independently
-hosted/built provenance, three for the independently supervised run, and two
-for report/receipt/conclusion. Each of the 15+5 cases is a
+After checkpoint 11, **2 checkpoints remain** in independent qualification
+(12-13). They comprise five merged execution steps: three for the independently
+supervised run and two for report/receipt/conclusion. Each of the 15+5 cases is a
 test obligation within its checkpoint, not an additional checkpoint in this
 count.
 
@@ -75,17 +73,17 @@ reconstruction. Provider/runtime namespace teardown, the pre-run baseline and
 three stable zero-resource samples remain exclusively operator-owned evidence
 for checkpoints 12-13; this checkpoint does not claim them.
 
-Checkpoint 11 now has a deterministic source archive, source-archive-derived
+Checkpoint 11 has a deterministic source archive, source-archive-derived
 immutable startup identity, exact toolchain/command/environment recording,
 two independent archive extractions and byte-identical rebuild enforcement,
 three raw executable digests, a canonical self-digesting manifest and strict
-retained-byte verifier. Exact source has been published to a private repository;
-hosted run `35067554697` passed tests, build, authority verification, upload and
-downloaded-byte verification for revision `32bfb5fd...`. The manifest remains
-qualification-ineligible and no attestation exists: GitHub rejected attestation
-for a user-owned private repository. Closing the final provenance third requires
-explicit public visibility (or an equivalent independent attestor) and a
-verified attestation; it cannot be self-certified by candidate code.
+retained-byte verifier. Exact source is public. Hosted run `35068957048` passed
+tests, build, authority verification and upload for revision `58a211f0...`, then
+created Sigstore/Rekor attestation `47846951` over all five retained subjects.
+The downloaded bundle passed the strict verifier and each subject passed
+`gh attestation verify`. The candidate manifest remains self-conservatively
+qualification-ineligible; external provenance is established by the hosted
+observations rather than by changing candidate-controlled flags.
 
 Checkpoint 1 corrects an earlier premise: the public adapter protocol allows
 up to eight channels; the former seven were candidate-specific. The eighth

@@ -1,11 +1,11 @@
 # Status
 
-Current checkpoint: **e1.8a in progress**. The deterministic local release
-bundle and a private GitHub-hosted Linux/amd64 build are complete. Formal build
-attestation remains blocked because GitHub does not support attestations for a
-user-owned private repository. Of the 13 checkpoints in [`PLAN.md`](PLAN.md),
-10 are complete and **3 remain**. Sections below record evidence at each
-checkpoint, not simultaneous current claims.
+Current checkpoint: **e1.8a complete**. The deterministic bundle, public source,
+GitHub-hosted Linux/amd64 rebuild, five-subject Sigstore/Rekor attestation,
+downloaded-byte verification and independent subject verification all pass. Of
+the 13 checkpoints in [`PLAN.md`](PLAN.md), 11 are complete and **2 remain**.
+Sections below record evidence at each checkpoint, not simultaneous current
+claims.
 
 Current pinned authority: Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -1551,11 +1551,11 @@ manifest, deterministic archive shape and every retained executable. Tests also
 launch the built adapter and require its two startup identities to equal the
 archive-derived identity, then prove executable tampering is rejected.
 
-The provenance boundary is deliberately not closed. The manifest says
+The candidate manifest deliberately says
 `candidate-local-reproducibility-only`, `qualification_eligible: false`, and
 records no independent source-hosting/build attestation or process-supervisor
-observation. A private `shell-echo/sandbox-runtime-external-caller` repository
-and commit-pinned hosted workflow are defined. Source revision
+observation because candidate-controlled bytes cannot self-certify those facts.
+The preliminary private source revision
 `32bfb5fd786228769742cd90db9cb18f127edf6f` was pushed and hosted run
 `35067554697` completed the full serialized race/shuffle suite, vet, deterministic
 Linux/amd64 build, strict bundle verification, public authority checkout and
@@ -1574,11 +1574,31 @@ and `sha256:fb19d045119c8971cd3696496df41d65b8213a4b3889b81f103fe6edd84ad5fd`.
 
 The final attestation step failed closed with GitHub's explicit
 `Feature not available for user-owned private repositories` response. No
-attestation was created, so candidate code cannot claim independent build
-provenance and e1.8a is not complete. Repository visibility will not be changed
-without explicit authorization.
+attestation was created for that preliminary revision, and it is retained only
+as historical failure evidence.
 
-Next required step: explicitly authorize public repository visibility (or name
-an equivalent independent attestor), then rerun and verify the attestation over
-the exact hosted bytes. **Three large checkpoints and six merged execution
-steps remain; e1.8a is not yet complete.**
+After explicit authorization, the repository was made public. Hosted run
+`35068957048` then passed every workflow step against source commit
+`58a211f0c167af3ec117c8cb8247bfe268bbae40`: full serialized race/shuffle tests,
+vet, deterministic Linux/amd64 build, strict bundle verification, public
+authority checkout and verification, artifact upload, attestation and immutable
+summary publication. Artifact `10435915145` has archive digest
+`sha256:d01ea02563a229c42b9a53dbfcd628f82e659f22dc3e2955d8d6cfa0197a259d`
+and expires on 2026-10-16.
+
+The downloaded public bundle passed the strict verifier with manifest digest
+`sha256:468b0f7bfd7e835ba5464033994739c28cec3b9985fbd24fb3ae375b8e7fb33b`.
+Its source archive/source identity is
+`sha256:94d7eb744c0e70d9058a6d19888bba0d4852908e8be407f86ab31864e1e82eac`;
+the qualification-adapter, external-caller and caller-gateway raw digests are
+respectively `sha256:90f8dfe5aa6ee3cd99edbaffede885646a5082f3460b63c4f07357c10101ca8f`,
+`sha256:82249d2f1d0162756bf6fda76231eb95d2d0972e8f3e929453a8cbf9cb157caf`,
+and `sha256:fb19d045119c8971cd3696496df41d65b8213a4b3889b81f103fe6edd84ad5fd`.
+GitHub attestation `47846951` covers exactly those five retained subjects, is
+signed through the Public Good Sigstore instance, is recorded in Rekor, and all
+five local `gh attestation verify --repo
+shell-echo/sandbox-runtime-external-caller` checks exited successfully.
+
+Next checkpoint: e1.8b, the independently supervised initial/reconstruction run
+against a live runtime with operator-owned observers and teardown. **Two large
+checkpoints and five merged execution steps remain; e1.8a is complete.**
