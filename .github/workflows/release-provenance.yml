@@ -1,0 +1,98 @@
+name: External Caller Release Provenance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  build-attest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact external caller source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Install exact Go toolchain
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.5
+          cache: false
+
+      - name: Verify candidate source
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -race -shuffle=on -count=1 ./...
+          go vet ./...
+
+      - name: Build content-addressed linux amd64 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          go run ./cmd/release-artifacts \
+            -source-root "$GITHUB_WORKSPACE" \
+            -output "$GITHUB_WORKSPACE/dist/e1.8a-linux-amd64" \
+            -goos linux \
+            -goarch amd64
+          go run ./cmd/release-artifacts \
+            -verify "$GITHUB_WORKSPACE/dist/e1.8a-linux-amd64"
+
+      - name: Checkout exact Provider authority
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: shell-echo/sandbox-runtime
+          ref: 22ba6987ea5fbc37d53942720133c0acad199edd
+          path: provider-source
+          persist-credentials: false
+
+      - name: Verify locked public authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          go run ./cmd/verify-authority \
+            -provider-source-root "$GITHUB_WORKSPACE/provider-source"
+
+      - name: Upload exact release bundle
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: external-caller-release-linux-amd64
+          path: dist/e1.8a-linux-amd64
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 30
+          compression-level: 0
+
+      - name: Attest source, manifest, and executable bytes
+        id: attest
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
+        with:
+          subject-path: |
+            dist/e1.8a-linux-amd64/source.tar
+            dist/e1.8a-linux-amd64/release-manifest.json
+            dist/e1.8a-linux-amd64/artifacts/qualification-adapter
+            dist/e1.8a-linux-amd64/artifacts/external-caller
+            dist/e1.8a-linux-amd64/artifacts/caller-gateway
+
+      - name: Publish immutable run references
+        shell: bash
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ATTESTATION_ID: ${{ steps.attest.outputs.attestation-id }}
+          ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
+        run: |
+          set -euo pipefail
+          {
+            echo "source_revision=$GITHUB_SHA"
+            echo "artifact_id=$ARTIFACT_ID"
+            echo "artifact_digest=$ARTIFACT_DIGEST"
+            echo "attestation_id=$ATTESTATION_ID"
+            echo "attestation_url=$ATTESTATION_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -22,14 +22,21 @@ var (
 )
 
 var (
-	identifierPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$`)
-	digestPattern     = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	capabilityPattern = regexp.MustCompile(`^sandbox\.[a-z0-9-]+$`)
-	semverPattern     = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
-	slotPattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9/_-]{0,127}$`)
-	labelPattern      = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,64}$`)
-	errorCodePattern  = regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,63}$`)
-	referencePattern  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,399}$`)
+	identifierPattern         = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$`)
+	digestPattern             = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	capabilityPattern         = regexp.MustCompile(`^sandbox\.[a-z0-9-]+$`)
+	semverPattern             = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+	slotPattern               = regexp.MustCompile(`^[a-z0-9][a-z0-9/_-]{0,127}$`)
+	labelPattern              = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,64}$`)
+	errorCodePattern          = regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,63}$`)
+	referencePattern          = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,399}$`)
+	workingDirectoryPattern   = regexp.MustCompile(`^/(workspace|tmp)(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$`)
+	environmentNamePattern    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
+	sessionReferencePattern   = regexp.MustCompile(`^ref:session:[A-Za-z0-9][A-Za-z0-9._-]{0,199}$`)
+	signalPattern             = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+	artifactReferencePattern  = regexp.MustCompile(`^artifact-ref:[A-Za-z0-9][A-Za-z0-9._:/-]{0,399}$`)
+	artifactSourcePathPattern = regexp.MustCompile(`^/outputs(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$`)
+	mediaTypePattern          = regexp.MustCompile(`^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$`)
 )
 
 func validateCapabilities(document ProviderCapabilities) error {
@@ -87,6 +94,95 @@ func ValidateCreateRequest(request CreateSandboxRequest) error {
 		}
 	}
 	return nil
+}
+
+func ValidateExecRequest(request ExecRequest) error {
+	if !identifierPattern.MatchString(request.OperationID) || !identifierPattern.MatchString(request.AttemptID) || request.FencingToken < 1 || request.FencingToken > maxSafeInteger || !boundedString(request.IdempotencyKey, 1, 200) || !digestPattern.MatchString(request.RequestDigest) || !validDateTime(request.DeadlineAt) || request.ExpectedGeneration < 1 || request.ExpectedGeneration > maxSafeInteger || len(request.Command) < 1 || len(request.Command) > 64 || !boundedString(request.WorkingDirectory, 1, 256) || !workingDirectoryPattern.MatchString(request.WorkingDirectory) || request.ResultRetentionSeconds < 1 || request.ResultRetentionSeconds > 86400 || len(request.Environment) > 64 || len(request.SecretReferenceIDs) > 64 {
+		return ErrInvalidContractDocument
+	}
+	for _, value := range request.Command {
+		if !boundedString(value, 1, 4096) || strings.ContainsAny(value, "\x00\r\n") {
+			return ErrInvalidContractDocument
+		}
+	}
+	for key, value := range request.Environment {
+		if !environmentNamePattern.MatchString(key) || !opaqueReference(value, "envref:") {
+			return ErrInvalidContractDocument
+		}
+	}
+	for _, id := range request.SecretReferenceIDs {
+		if !identifierPattern.MatchString(id) {
+			return ErrInvalidContractDocument
+		}
+	}
+	if request.Capture != nil && (request.Capture.MaxBytes < 0 || request.Capture.MaxBytes > 8388608) {
+		return ErrInvalidContractDocument
+	}
+	if request.SecretGrantID != "" && !opaqueReference(request.SecretGrantID, "grant:") || request.SecretGrantDigest != "" && !digestPattern.MatchString(request.SecretGrantDigest) || request.SecretGrantID != "" && request.SecretGrantDigest == "" || request.SecretGrantDigest != "" && request.SecretGrantID == "" || request.StdinReference != "" && !opaqueReference(request.StdinReference, "ref:") {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func ValidateCancelExecRequest(request CancelExecRequest) error {
+	if !identifierPattern.MatchString(request.OperationID) || !identifierPattern.MatchString(request.AttemptID) || request.FencingToken < 1 || request.FencingToken > maxSafeInteger || !boundedString(request.IdempotencyKey, 1, 200) || !digestPattern.MatchString(request.RequestDigest) || !validDateTime(request.DeadlineAt) || request.ExpectedGeneration < 1 || request.ExpectedGeneration > maxSafeInteger || !identifierPattern.MatchString(request.TargetOperationID) || !identifierPattern.MatchString(request.TargetAttemptID) || !oneOf(request.Reason, "caller_requested", "deadline_exceeded", "shutdown", "policy") {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func ValidateRuntimeSessionOpenRequest(request RuntimeSessionOpenRequest) error {
+	if !identifierPattern.MatchString(request.OperationID) || !identifierPattern.MatchString(request.AttemptID) || request.FencingToken < 1 || request.FencingToken > maxSafeInteger || !boundedString(request.IdempotencyKey, 1, 200) || !digestPattern.MatchString(request.RequestDigest) || !validDateTime(request.DeadlineAt) || request.ExpectedGeneration < 1 || !identifierPattern.MatchString(request.RuntimeSessionID) || request.RuntimeType != "terminal" || !identifierPattern.MatchString(request.CapabilityProfileID) || !validDateTime(request.ExpiresAt) {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func ValidateArtifactStagingRequest(request ArtifactStagingRequest) error {
+	if !identifierPattern.MatchString(request.OperationID) || !identifierPattern.MatchString(request.AttemptID) || request.FencingToken < 1 || request.FencingToken > maxSafeInteger || !boundedString(request.IdempotencyKey, 1, 200) || !digestPattern.MatchString(request.RequestDigest) || !validDateTime(request.DeadlineAt) || request.ExpectedGeneration < 1 || request.ExpectedGeneration > maxSafeInteger || !artifactReferencePattern.MatchString(request.ArtifactReference) || !boundedString(request.SourcePath, 1, 512) || !artifactSourcePathPattern.MatchString(request.SourcePath) || !digestPattern.MatchString(request.ExpectedDigest) || !boundedString(request.ExpectedMediaType, 3, 127) || !mediaTypePattern.MatchString(request.ExpectedMediaType) || request.MaxBytes < 1 || request.MaxBytes > 67108864 || request.RetentionSeconds < 1 || request.RetentionSeconds > 86400 {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func validateExecResult(document ExecResult) error {
+	if !identifierPattern.MatchString(document.OperationID) || !identifierPattern.MatchString(document.AttemptID) || document.FencingToken < 1 || !identifierPattern.MatchString(document.SandboxID) || !oneOf(document.Status, "completed", "failed", "cancelled", "outcome_unknown") || !validDateTime(document.StartedAt) || !validDateTime(document.CompletedAt) || !validDateTime(document.RetainedUntil) {
+		return ErrInvalidContractDocument
+	}
+	if document.FencingToken > maxSafeInteger || document.ExitCode != nil && (*document.ExitCode < -1 || *document.ExitCode > 255) || document.Signal != "" && !signalPattern.MatchString(document.Signal) || document.StdoutReference != "" && !opaqueReference(document.StdoutReference, "ref:") || document.StderrReference != "" && !opaqueReference(document.StderrReference, "ref:") || document.Status == "outcome_unknown" && (document.Error == nil || document.Error.Outcome != "outcome_unknown") {
+		return ErrInvalidContractDocument
+	}
+	if document.Error != nil && validateProviderError(*document.Error) != nil {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func validateRuntimeSessionHandoff(document RuntimeSessionHandoff) error {
+	if !identifierPattern.MatchString(document.OperationID) || !identifierPattern.MatchString(document.AttemptID) || document.FencingToken < 1 || document.FencingToken > maxSafeInteger || !identifierPattern.MatchString(document.SandboxID) || !identifierPattern.MatchString(document.RuntimeSessionID) || document.RuntimeType != "terminal" || !identifierPattern.MatchString(document.CapabilityProfileID) || document.Protocol != "websocket" || !sessionReferencePattern.MatchString(document.InternalEndpointReference) || document.ConnectionGeneration < 1 || document.ConnectionGeneration > maxSafeInteger || !validDateTime(document.ExpiresAt) {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func validateArtifactStagingEvidence(document ArtifactStagingEvidence) error {
+	if !identifierPattern.MatchString(document.OperationID) || !identifierPattern.MatchString(document.AttemptID) || document.FencingToken < 1 || document.FencingToken > maxSafeInteger || !identifierPattern.MatchString(document.SandboxID) || !artifactReferencePattern.MatchString(document.ArtifactReference) || document.StagingReference != "" && !opaqueReference(document.StagingReference, "ref:") || !oneOf(document.Status, "staged", "rejected") || !digestPattern.MatchString(document.ContentDigest) || !boundedString(document.MediaType, 3, 127) || !mediaTypePattern.MatchString(document.MediaType) || document.SizeBytes < 0 || document.SizeBytes > 67108864 || !validDateTime(document.ObservedAt) || !validDateTime(document.ExpiresAt) || !digestPattern.MatchString(document.EvidenceDigest) {
+		return ErrInvalidContractDocument
+	}
+	checks := []ArtifactCheck{document.TenantBindingCheck, document.ActiveContentCheck, document.MalwareCheck}
+	for _, check := range checks {
+		if !oneOf(check.Status, "passed", "failed", "not_run") || !validDateTime(check.CheckedAt) || check.EvidenceReference != "" && !opaqueReference(check.EvidenceReference, "ref:") {
+			return ErrInvalidContractDocument
+		}
+	}
+	if document.Status == "staged" && (document.StagingReference == "" || document.TenantBindingCheck.Status != "passed" || document.ActiveContentCheck.Status != "passed" || document.MalwareCheck.Status != "passed") {
+		return ErrInvalidContractDocument
+	}
+	return nil
+}
+
+func opaqueReference(value, prefix string) bool {
+	return strings.HasPrefix(value, prefix) && referencePattern.MatchString(strings.TrimPrefix(value, prefix))
 }
 
 func validateSandboxSpec(spec SandboxSpec) error {

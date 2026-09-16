@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	ProtocolID        = "sandbox-runtime-external-caller-private-gateway-service-v1"
-	MaxBootstrapBytes = 20 << 10
-	MaxCommandBytes   = 16 << 10
-	MaxReplyBytes     = 4 << 10
-	MaxCommands       = 256
-	MaxLifetime       = 5 * time.Minute
+	ProtocolID         = "sandbox-runtime-external-caller-private-gateway-service-v1"
+	TerminalProtocolID = "sandbox-runtime-external-caller-private-gateway-service-v2"
+	MaxBootstrapBytes  = 20 << 10
+	MaxCommandBytes    = 16 << 10
+	MaxReplyBytes      = 4 << 10
+	MaxCommands        = 256
+	MaxLifetime        = 5 * time.Minute
 )
 
 var ErrControl = errors.New("Gateway service control rejected")
@@ -37,12 +38,26 @@ type Bootstrap struct {
 	ProtocolID        string                 `json:"protocol_id"`
 	Bootstrap         gatewaycontrol.Request `json:"bootstrap"`
 	ControlDescriptor int                    `json:"control_descriptor"`
+	BackendDescriptor int                    `json:"backend_descriptor,omitempty"`
 	Deadline          time.Time              `json:"deadline"`
 }
 
 func DecodeBootstrap(raw []byte) (Bootstrap, error) {
 	var result Bootstrap
-	if len(raw) > MaxBootstrapBytes || decode(raw, &result, "protocol_id", "bootstrap", "control_descriptor", "deadline") != nil || result.ProtocolID != ProtocolID || result.ControlDescriptor < 3 || result.ControlDescriptor > 1024 || result.Deadline.IsZero() {
+	var routing struct {
+		ProtocolID string `json:"protocol_id"`
+	}
+	if json.Unmarshal(raw, &routing) != nil {
+		return Bootstrap{}, ErrControl
+	}
+	keys := []string{"protocol_id", "bootstrap", "control_descriptor", "deadline"}
+	if routing.ProtocolID == TerminalProtocolID {
+		keys = append(keys, "backend_descriptor")
+	}
+	if len(raw) > MaxBootstrapBytes || decode(raw, &result, keys...) != nil || (result.ProtocolID != ProtocolID && result.ProtocolID != TerminalProtocolID) || result.ControlDescriptor < 3 || result.ControlDescriptor > 1024 || result.Deadline.IsZero() {
+		return Bootstrap{}, ErrControl
+	}
+	if result.ProtocolID == ProtocolID && result.BackendDescriptor != 0 || result.ProtocolID == TerminalProtocolID && (result.BackendDescriptor < 3 || result.BackendDescriptor > 1024 || result.BackendDescriptor == result.ControlDescriptor) {
 		return Bootstrap{}, ErrControl
 	}
 	var fields map[string]json.RawMessage
@@ -53,6 +68,9 @@ func DecodeBootstrap(raw []byte) (Bootstrap, error) {
 	}
 	for _, descriptor := range request.CredentialChannelDescriptors {
 		if descriptor.FileDescriptor == result.ControlDescriptor {
+			return Bootstrap{}, ErrControl
+		}
+		if descriptor.FileDescriptor == result.BackendDescriptor {
 			return Bootstrap{}, ErrControl
 		}
 	}

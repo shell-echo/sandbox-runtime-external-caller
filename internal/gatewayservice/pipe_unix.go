@@ -18,6 +18,24 @@ func OpenCommandPipe(fd int) (*os.File, error) {
 	return adoptPollablePipe(fd)
 }
 
+func OpenBackendPipe(fd int) (*os.File, error) {
+	if fd < 3 || fd > 1024 {
+		return nil, ErrControl
+	}
+	var status syscall.Stat_t
+	if syscall.Fstat(fd, &status) != nil || status.Mode&syscall.S_IFMT != syscall.S_IFSOCK || syscall.SetNonblock(fd, true) != nil {
+		_ = syscall.Close(fd)
+		return nil, ErrControl
+	}
+	syscall.CloseOnExec(fd)
+	file := os.NewFile(uintptr(fd), "gateway-backend-bridge")
+	if file == nil {
+		_ = syscall.Close(fd)
+		return nil, ErrControl
+	}
+	return file, nil
+}
+
 // DuplicateOutputPipe preserves the caller's File ownership. Only this returned
 // wrapper performs service output; the original must not be used concurrently.
 func DuplicateOutputPipe(source *os.File) (*os.File, error) {

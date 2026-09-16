@@ -20,8 +20,8 @@ import (
 
 var ErrService = errors.New("Gateway service failed")
 
-// UnavailableResolver is the fail-closed production boundary until the caller's
-// real Provider handoff composition is implemented. No echo/local shell fallback.
+// UnavailableResolver remains the fail-closed service-v1 and test boundary.
+// Operational service v2 replaces it with the private Caller byte bridge.
 type UnavailableResolver struct{}
 
 func (UnavailableResolver) Open(context.Context, string) (io.ReadWriteCloser, error) {
@@ -45,6 +45,9 @@ func Serve(parent context.Context, bootstrap Bootstrap, identity *credentials.Ga
 	}
 	ctx, cancel := context.WithDeadline(parent, deadline)
 	defer cancel()
+	if closer, ok := resolver.(io.Closer); ok {
+		defer closer.Close()
+	}
 	defer commands.Close()
 	stopCommandClose := context.AfterFunc(ctx, func() { _ = commands.Close() })
 	defer stopCommandClose()

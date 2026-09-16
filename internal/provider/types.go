@@ -2,6 +2,8 @@ package provider
 
 import "encoding/json"
 
+const RuntimeSessionConnectDescriptorContractID = "urn:shell-echo:sandbox-runtime:descriptor:runtime-session-connect:v1"
+
 type Capability struct {
 	ID       string   `json:"id"`
 	Versions []string `json:"versions"`
@@ -133,6 +135,154 @@ type CreateSandboxRequest struct {
 	ProtocolVersion string                     `json:"protocol_version"`
 	Spec            SandboxSpec                `json:"spec"`
 	TraceContext    map[string]json.RawMessage `json:"trace_context,omitempty"`
+}
+
+type ExecCapture struct {
+	Stdout   bool  `json:"stdout,omitempty"`
+	Stderr   bool  `json:"stderr,omitempty"`
+	MaxBytes int64 `json:"max_bytes,omitempty"`
+}
+
+type ExecRequest struct {
+	OperationID            string            `json:"operation_id"`
+	AttemptID              string            `json:"attempt_id"`
+	FencingToken           int64             `json:"fencing_token"`
+	IdempotencyKey         string            `json:"idempotency_key"`
+	RequestDigest          string            `json:"request_digest"`
+	DeadlineAt             string            `json:"deadline_at"`
+	ExpectedGeneration     int64             `json:"expected_generation"`
+	Command                []string          `json:"command"`
+	WorkingDirectory       string            `json:"working_directory"`
+	ResultRetentionSeconds int64             `json:"result_retention_seconds"`
+	Environment            map[string]string `json:"environment,omitempty"`
+	SecretReferenceIDs     []string          `json:"secret_reference_ids,omitempty"`
+	SecretGrantID          string            `json:"secret_grant_id,omitempty"`
+	SecretGrantDigest      string            `json:"secret_grant_digest,omitempty"`
+	StdinReference         string            `json:"stdin_reference,omitempty"`
+	Capture                *ExecCapture      `json:"capture,omitempty"`
+}
+
+type CancelExecRequest struct {
+	OperationID        string `json:"operation_id"`
+	AttemptID          string `json:"attempt_id"`
+	FencingToken       int64  `json:"fencing_token"`
+	IdempotencyKey     string `json:"idempotency_key"`
+	RequestDigest      string `json:"request_digest"`
+	DeadlineAt         string `json:"deadline_at"`
+	ExpectedGeneration int64  `json:"expected_generation"`
+	TargetOperationID  string `json:"target_operation_id"`
+	TargetAttemptID    string `json:"target_attempt_id"`
+	Reason             string `json:"reason"`
+}
+
+type ExecResult struct {
+	OperationID     string         `json:"operation_id"`
+	AttemptID       string         `json:"attempt_id"`
+	FencingToken    int64          `json:"fencing_token"`
+	SandboxID       string         `json:"sandbox_id"`
+	Status          string         `json:"status"`
+	ExitCode        *int           `json:"exit_code,omitempty"`
+	Signal          string         `json:"signal,omitempty"`
+	StdoutReference string         `json:"stdout_reference,omitempty"`
+	StderrReference string         `json:"stderr_reference,omitempty"`
+	StartedAt       string         `json:"started_at"`
+	CompletedAt     string         `json:"completed_at"`
+	RetainedUntil   string         `json:"retained_until"`
+	Error           *ProviderError `json:"error,omitempty"`
+}
+
+type UsageEvidence struct {
+	EvidenceID           string       `json:"evidence_id"`
+	SandboxID            string       `json:"sandbox_id"`
+	OperationID          string       `json:"operation_id"`
+	AttemptID            string       `json:"attempt_id"`
+	FencingToken         int64        `json:"fencing_token"`
+	Entries              []UsageEntry `json:"entries"`
+	ReconciliationStatus string       `json:"reconciliation_status"`
+	ObservedAt           string       `json:"observed_at"`
+	RetainedUntil        string       `json:"retained_until"`
+	EvidenceDigest       string       `json:"evidence_digest"`
+}
+
+type UsageEntry struct {
+	EntryID           string `json:"entry_id"`
+	SandboxID         string `json:"sandbox_id"`
+	OperationID       string `json:"operation_id,omitempty"`
+	Meter             string `json:"meter"`
+	Quantity          int64  `json:"quantity"`
+	Unit              string `json:"unit"`
+	MeterSource       string `json:"meter_source"`
+	EvidenceReference string `json:"evidence_reference"`
+	OccurredAt        string `json:"occurred_at"`
+}
+
+type RuntimeSessionOpenRequest struct {
+	OperationID         string `json:"operation_id"`
+	AttemptID           string `json:"attempt_id"`
+	FencingToken        int64  `json:"fencing_token"`
+	IdempotencyKey      string `json:"idempotency_key"`
+	RequestDigest       string `json:"request_digest"`
+	DeadlineAt          string `json:"deadline_at"`
+	ExpectedGeneration  int64  `json:"expected_generation"`
+	RuntimeSessionID    string `json:"runtime_session_id"`
+	RuntimeType         string `json:"runtime_type"`
+	CapabilityProfileID string `json:"capability_profile_id"`
+	ExpiresAt           string `json:"expires_at"`
+}
+
+type RuntimeSessionHandoff struct {
+	OperationID               string `json:"operation_id"`
+	AttemptID                 string `json:"attempt_id"`
+	FencingToken              int64  `json:"fencing_token"`
+	SandboxID                 string `json:"sandbox_id"`
+	RuntimeSessionID          string `json:"runtime_session_id"`
+	RuntimeType               string `json:"runtime_type"`
+	CapabilityProfileID       string `json:"capability_profile_id"`
+	Protocol                  string `json:"protocol"`
+	InternalEndpointReference string `json:"internal_endpoint_reference"`
+	ConnectionGeneration      int64  `json:"connection_generation"`
+	ExpiresAt                 string `json:"expires_at"`
+}
+
+type ArtifactStagingRequest struct {
+	OperationID        string `json:"operation_id"`
+	AttemptID          string `json:"attempt_id"`
+	FencingToken       int64  `json:"fencing_token"`
+	IdempotencyKey     string `json:"idempotency_key"`
+	RequestDigest      string `json:"request_digest"`
+	DeadlineAt         string `json:"deadline_at"`
+	ExpectedGeneration int64  `json:"expected_generation"`
+	ArtifactReference  string `json:"artifact_reference"`
+	SourcePath         string `json:"source_path"`
+	ExpectedDigest     string `json:"expected_digest"`
+	ExpectedMediaType  string `json:"expected_media_type"`
+	MaxBytes           int64  `json:"max_bytes"`
+	RetentionSeconds   int64  `json:"retention_seconds"`
+}
+
+type ArtifactCheck struct {
+	Status            string `json:"status"`
+	CheckedAt         string `json:"checked_at"`
+	EvidenceReference string `json:"evidence_reference,omitempty"`
+}
+
+type ArtifactStagingEvidence struct {
+	OperationID        string        `json:"operation_id"`
+	AttemptID          string        `json:"attempt_id"`
+	FencingToken       int64         `json:"fencing_token"`
+	SandboxID          string        `json:"sandbox_id"`
+	ArtifactReference  string        `json:"artifact_reference"`
+	StagingReference   string        `json:"staging_reference,omitempty"`
+	Status             string        `json:"status"`
+	ContentDigest      string        `json:"content_digest"`
+	MediaType          string        `json:"media_type"`
+	SizeBytes          int64         `json:"size_bytes"`
+	TenantBindingCheck ArtifactCheck `json:"tenant_binding_check"`
+	ActiveContentCheck ArtifactCheck `json:"active_content_check"`
+	MalwareCheck       ArtifactCheck `json:"malware_check"`
+	ObservedAt         string        `json:"observed_at"`
+	ExpiresAt          string        `json:"expires_at"`
+	EvidenceDigest     string        `json:"evidence_digest"`
 }
 
 type ProviderError struct {

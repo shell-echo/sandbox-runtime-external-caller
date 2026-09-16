@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,22 +21,58 @@ import (
 )
 
 type fakeClient struct {
-	capabilities provider.ProviderCapabilities
-	raw          []byte
-	store        *callerstate.Store
-	operations   []string
-	statuses     []string
-	creates      []provider.CreateSandboxRequest
-	admissions   []provider.Admission
+	capabilities         provider.ProviderCapabilities
+	raw                  []byte
+	store                *callerstate.Store
+	operations           []string
+	statuses             []string
+	creates              []provider.CreateSandboxRequest
+	admissions           []provider.Admission
+	execs                []provider.ExecRequest
+	cancels              []provider.CancelExecRequest
+	sessions             []provider.RuntimeSessionOpenRequest
+	artifacts            []provider.ArtifactStagingRequest
+	connects             []provider.RuntimeSessionHandoff
+	result               provider.ExecResult
+	usage                provider.UsageEvidence
+	handoff              provider.RuntimeSessionHandoff
+	artifactEvidence     provider.ArtifactStagingEvidence
+	hook                 func(string) error
+	resultHook           func(*provider.ExecResult)
+	usageHook            func(*provider.UsageEvidence)
+	handoffHook          func(*provider.RuntimeSessionHandoff)
+	operationHook        func(*provider.ProviderOperation)
+	lastOperation        provider.ProviderOperation
+	createHook           func(int, provider.CreateSandboxRequest, provider.Admission) error
+	execHook             func(int, provider.ExecRequest, provider.Admission) error
+	cancelHook           func(int, provider.CancelExecRequest, provider.Admission) error
+	sessionHook          func(int, provider.RuntimeSessionOpenRequest, provider.Admission) error
+	artifactHook         func(int, provider.ArtifactStagingRequest, provider.Admission) error
+	artifactEvidenceHook func(*provider.ArtifactStagingEvidence)
+	statusHook           func(provider.ReadDescriptor, provider.Admission) error
+	connectHook          func(provider.RuntimeSessionHandoff, provider.Admission) (io.ReadWriteCloser, error)
+	capabilityCalls      int
+	capabilityHook       func(int) error
 }
 
 func (client *fakeClient) DiscoverCapabilitiesDocument(context.Context) (provider.ProviderCapabilities, []byte, error) {
+	client.capabilityCalls++
+	if client.capabilityHook != nil {
+		if err := client.capabilityHook(client.capabilityCalls); err != nil {
+			return provider.ProviderCapabilities{}, nil, err
+		}
+	}
 	return client.capabilities, append([]byte(nil), client.raw...), nil
 }
 
 func (client *fakeClient) CreateSandbox(_ context.Context, request provider.CreateSandboxRequest, admission provider.Admission) (provider.ProviderOperation, error) {
 	client.creates = append(client.creates, request)
 	client.admissions = append(client.admissions, admission)
+	if client.createHook != nil {
+		if err := client.createHook(len(client.creates), request, admission); err != nil {
+			return provider.ProviderOperation{}, err
+		}
+	}
 	return provider.ProviderOperation{
 		OperationID: request.OperationID, AttemptID: request.AttemptID, FencingToken: request.FencingToken,
 		SandboxID: request.Spec.SandboxID, Type: "create", Status: "accepted", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
@@ -44,18 +81,81 @@ func (client *fakeClient) CreateSandbox(_ context.Context, request provider.Crea
 
 func (client *fakeClient) GetOperation(_ context.Context, descriptor provider.ReadDescriptor, admission provider.Admission) (provider.ProviderOperation, error) {
 	client.admissions = append(client.admissions, admission)
+	if client.hook != nil {
+		if err := client.hook("poll:" + descriptor.OperationID); err != nil {
+			return provider.ProviderOperation{}, err
+		}
+	}
 	status := "succeeded"
 	if len(client.operations) > 0 {
 		status, client.operations = client.operations[0], client.operations[1:]
 	}
-	return provider.ProviderOperation{
+	typ := "create"
+	if descriptor.OperationID == client.store.Snapshot().Plan.Exec.OperationID {
+		typ = "exec"
+	}
+	if descriptor.OperationID == client.store.Snapshot().Plan.Terminal.OperationID {
+		typ = "open_runtime_session"
+	}
+	if descriptor.OperationID == client.store.Snapshot().Plan.Artifact.OperationID {
+		typ = "artifact_stage"
+	}
+	operation := provider.ProviderOperation{
 		OperationID: descriptor.OperationID, AttemptID: descriptor.AttemptID, FencingToken: descriptor.FencingToken,
-		SandboxID: descriptor.SandboxID, Type: "create", Status: status, ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
-	}, nil
+		SandboxID: descriptor.SandboxID, Type: typ, Status: status, ObservedAt: time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	if client.operationHook != nil {
+		client.operationHook(&operation)
+	}
+	client.lastOperation = operation
+	return operation, nil
+}
+
+func (client *fakeClient) StageArtifact(_ context.Context, sandboxID string, request provider.ArtifactStagingRequest, admission provider.Admission) (provider.ProviderOperation, error) {
+	client.artifacts = append(client.artifacts, request)
+	client.admissions = append(client.admissions, admission)
+	if client.artifactHook != nil {
+		if err := client.artifactHook(len(client.artifacts), request, admission); err != nil {
+			return provider.ProviderOperation{}, err
+		}
+	}
+	return provider.ProviderOperation{OperationID: request.OperationID, AttemptID: request.AttemptID, FencingToken: request.FencingToken, SandboxID: sandboxID, Type: "artifact_stage", Status: "accepted", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano)}, nil
+}
+
+func (client *fakeClient) GetArtifactStagingEvidence(_ context.Context, descriptor provider.ReadDescriptor, admission provider.Admission) (provider.ArtifactStagingEvidence, error) {
+	client.admissions = append(client.admissions, admission)
+	if client.hook != nil {
+		if err := client.hook("artifact-evidence:" + descriptor.OperationID); err != nil {
+			return provider.ArtifactStagingEvidence{}, err
+		}
+	}
+	evidence := client.artifactEvidence
+	if evidence.OperationID == "" {
+		now := time.Now().UTC()
+		evidence = provider.ArtifactStagingEvidence{
+			OperationID: descriptor.OperationID, AttemptID: descriptor.AttemptID, FencingToken: descriptor.FencingToken, SandboxID: descriptor.SandboxID,
+			ArtifactReference: client.artifacts[len(client.artifacts)-1].ArtifactReference, StagingReference: "ref:staging:synthetic", Status: "staged",
+			ContentDigest: artifactDigest, MediaType: artifactMediaType, SizeBytes: artifactSizeBytes,
+			TenantBindingCheck: provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:tenant"},
+			ActiveContentCheck: provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:active"},
+			MalwareCheck:       provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:malware"},
+			ObservedAt:         now.Format(time.RFC3339Nano), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339Nano), EvidenceDigest: "sha256:" + strings.Repeat("e", 64),
+		}
+	}
+	if client.artifactEvidenceHook != nil {
+		client.artifactEvidenceHook(&evidence)
+	}
+	client.artifactEvidence = evidence
+	return evidence, nil
 }
 
 func (client *fakeClient) GetSandboxStatus(_ context.Context, descriptor provider.ReadDescriptor, admission provider.Admission) (provider.SandboxStatus, error) {
 	client.admissions = append(client.admissions, admission)
+	if client.statusHook != nil {
+		if err := client.statusHook(descriptor, admission); err != nil {
+			return provider.SandboxStatus{}, err
+		}
+	}
 	observed := "ready"
 	if len(client.statuses) > 0 {
 		observed, client.statuses = client.statuses[0], client.statuses[1:]
@@ -83,11 +183,13 @@ func TestInitialBindsExactCapabilitiesAndSucceededLifecycle(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); err != nil {
+	authority, err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base })
+	if err != nil {
 		t.Fatal(err)
 	}
+	authority.Close()
 	state := store.Snapshot()
-	if state.Stage != callerstate.StageLifecycleBound || state.StoreRevision != 3 || state.Provider == nil || state.Lifecycle == nil || state.Provider.ProviderRevisionID != capabilities.ProviderRevisionID || state.Provider.CapabilitySnapshotHash != rawDigest(raw) || state.Provider.PolicyDigest == "" || state.Provider.PolicyDecidedAt == "" {
+	if state.Stage != callerstate.StageTerminalBound || state.StoreRevision != 5 || state.Provider == nil || state.Lifecycle == nil || state.Exec == nil || state.Terminal == nil || state.Provider.ProviderRevisionID != capabilities.ProviderRevisionID || state.Provider.CapabilitySnapshotHash != rawDigest(raw) || state.Provider.PolicyDigest == "" || state.Provider.PolicyDecidedAt == "" {
 		t.Fatalf("bound lifecycle state = %#v", state)
 	}
 	if state.Lifecycle.OperationID != state.Plan.Create.OperationID || state.Lifecycle.FencingToken != createFencingToken {
@@ -132,7 +234,7 @@ func TestReconstructionRequiresCapabilityAndLifecycleContinuityWithoutMutation(t
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "reconstruction", "https://provider.example", &credentials.Bundle{}, reconstructed, fakeFactory(t, map[string]*fakeClient{"controller_a": client}, &closed), func() time.Time { return base }); err != nil {
+	if _, err := run(ctx, "reconstruction", "https://provider.example", &credentials.Bundle{}, reconstructed, fakeFactory(t, map[string]*fakeClient{"controller_a": client}, &closed), func() time.Time { return base }); err != nil {
 		t.Fatal(err)
 	}
 	if got := reconstructed.Snapshot(); !reflect.DeepEqual(got, want) || closed != 1 {
@@ -154,7 +256,7 @@ func TestInitialRejectsCrossControllerCapabilityMismatchBeforeBinding(t *testing
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilityContinuity) {
+	if _, err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilityContinuity) {
 		t.Fatalf("capability mismatch error = %v", err)
 	}
 	if state := store.Snapshot(); state.Stage != callerstate.StagePlanned || state.Provider != nil || closed != 2 {
@@ -179,7 +281,7 @@ func TestInitialRejectsIncompleteCapabilitySelectionBeforeBinding(t *testing.T) 
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilitySelection) {
+	if _, err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilitySelection) {
 		t.Fatalf("incomplete capability error = %v", err)
 	}
 	if state := store.Snapshot(); state.Stage != callerstate.StagePlanned || state.Provider != nil || closed != 2 {
@@ -199,7 +301,7 @@ func TestInitialLifecycleFailureRetainsOnlyCapabilityBinding(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrLifecycle) {
+	if _, err := run(ctx, "initial", "https://provider.example", &credentials.Bundle{}, store, fakeFactory(t, clients, &closed), func() time.Time { return base }); !errors.Is(err, ErrLifecycle) {
 		t.Fatalf("lifecycle failure error = %v", err)
 	}
 	state := store.Snapshot()
@@ -226,7 +328,7 @@ func TestReconstructionRejectsChangedCapabilityBytesWithoutMutation(t *testing.T
 	ctx, cancel := context.WithDeadline(context.Background(), base.Add(5*time.Second))
 	defer cancel()
 	closed := 0
-	if err := run(ctx, "reconstruction", "https://provider.example", &credentials.Bundle{}, reconstructed, fakeFactory(t, map[string]*fakeClient{"controller_a": client}, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilityContinuity) {
+	if _, err := run(ctx, "reconstruction", "https://provider.example", &credentials.Bundle{}, reconstructed, fakeFactory(t, map[string]*fakeClient{"controller_a": client}, &closed), func() time.Time { return base }); !errors.Is(err, ErrCapabilityContinuity) {
 		t.Fatalf("changed capability error = %v", err)
 	}
 	if got := reconstructed.Snapshot(); !reflect.DeepEqual(got, want) || closed != 1 {
@@ -265,8 +367,9 @@ func selectedCapabilities(t *testing.T) (provider.ProviderCapabilities, []byte) 
 		Capabilities: []provider.Capability{
 			{ID: "sandbox.exec", Versions: []string{"1.0.0"}, Profiles: []string{ExecProfileID}},
 			{ID: "sandbox.terminal", Versions: []string{"1.0.0"}, Profiles: []string{TerminalProfileID}},
+			{ID: "sandbox.terminal-connect", Versions: []string{"1.0.0"}, Profiles: []string{TerminalConnectProfileID}},
 		},
-		RuntimeProfiles:         []provider.RuntimeProfile{{ID: RuntimeProfileID, IsolationClass: "container", CapabilityProfileIDs: []string{ExecProfileID, TerminalProfileID}}},
+		RuntimeProfiles:         []provider.RuntimeProfile{{ID: RuntimeProfileID, IsolationClass: "container", CapabilityProfileIDs: []string{ExecProfileID, TerminalProfileID, TerminalConnectProfileID}}},
 		SnapshotRestoreProfiles: []provider.SnapshotRestoreProfile{{ProfileID: "sandbox-snapshot-workspace-v1", Level: "workspace", SuiteID: "sandbox-provider", SuiteVersion: "1.0.0", SuiteDigest: "sha256:" + strings.Repeat("a", 64)}},
 		Limits:                  provider.ProviderLimits{MaxCPUMillis: 1000, MaxMemoryBytes: 1073741824, MaxEphemeralStorageBytes: 1073741824, MaxWorkspaceBytes: &workspace, MaxLeaseSeconds: 3600, MaxExecSeconds: 300},
 	}

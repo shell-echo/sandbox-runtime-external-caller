@@ -3,21 +3,21 @@
   "lock_id": "sandbox-runtime-external-caller-authority-v1",
   "source": {
     "repository": "https://github.com/shell-echo/sandbox-runtime.git",
-    "revision": "9206e601f75a54db0b66969239d7e8cc5bcc8af9",
-    "contract_tree": "c5e4221f2ceaaaad53c8038e1ebaacfe0c5a4daf"
+    "revision": "22ba6987ea5fbc37d53942720133c0acad199edd",
+    "contract_tree": "c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38"
   },
   "contract": {
     "namespace": "urn:shell-echo:sandbox-runtime:provider-v1",
     "version": "1.0.0",
-    "manifest_digest": "sha256:23405c62747b6c678d2fcc84dfd885e435ab12771befdb29499b2e7367404da1",
-    "openapi_digest": "sha256:08261369d39bb6837759ab4b95f460df3b6c3feb51fbc56d38fe393ce69be2ca",
-    "semantic_rules_digest": "sha256:b9d3706db2d5c6fa0cfe4a389bb2ad4718daecca076d660c2e7985795e6c1999",
+    "manifest_digest": "sha256:1e17e0ef4f86e03be1dac22c48e7b556a8600a4baa6252f4514390d339b8ba3f",
+    "openapi_digest": "sha256:64f0f8d93de39217f5d684758c1407ba62df16f274137d1855821df9dd004a1d",
+    "semantic_rules_digest": "sha256:8757107d5b44451bcb1bdae223262cb870f92b3a6c6fed0e6fef7ebf8f15587e",
     "local_suite": {
       "suite_id": "sandbox-provider",
       "suite_version": "1.0.0",
-      "suite_digest": "sha256:bf177a5bd2b4228605b3ebc311d25a1cc348d9548b2b5c2d333a0c69e71ca528",
+      "suite_digest": "sha256:b40c932643f4a1e5fd6681e3abf9b64a607609866a6254456970f8b8034cf2a8",
       "profile_id": "sandbox-runtime-provider-v1",
-      "case_count": 50
+      "case_count": 53
     },
     "remote_discovery_suite": {
       "suite_id": "sandbox-provider-remote",
@@ -30,7 +30,7 @@
   "qualification_profile": {
     "profile_id": "sandbox-runtime-external-caller-coding-shell-v1",
     "profile_version": "1.0.0",
-    "profile_digest": "sha256:baee769c0acc395448af61faef99cd97fbb63ccb83c70eb51915952be519991a",
+    "profile_digest": "sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14",
     "profile_digest_profile": "rfc8785-full-document-excluding-profile-digest-v1",
     "schema_digest": "sha256:2ad01731b69246399d6f04048593f31da9e4118b1dff99a81551b0c9b5972d77",
     "phases": [
@@ -69,34 +69,34 @@
   "adapter_protocol": {
     "protocol_id": "sandbox-runtime-external-caller-adapter-v1",
     "protocol_version": "1.0.0",
-    "schema_digest": "sha256:0c3783bb4014d1e04d61f1987fa77f0c27a158c65552704f69f3f340bbaa6b20",
-    "semantics_digest": "sha256:deeef0edf5cc63705d84e45a8f64f657e97346a3616259c2d8b718b1e38b0bd5",
+    "schema_digest": "sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969",
+    "semantics_digest": "sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662",
     "transcript_projection_schema_digest": "sha256:d2eb229f55528df8ba68426cc5b7da9d1bd6a78a412707d656b77c1effeff293"
   },
   "report_evidence": {
-    "report_schema_digest": "sha256:0fef4381588ace43c63ee6aaba0f9ddfa192af3c03353c1a13e00344bc416f3f",
-    "validator_semantics_digest": "sha256:2cccf9502c1521ee3afe35478b0359fa9cf03eda6ef5b0c5130ed8ff6fd8daf2"
+    "report_schema_digest": "sha256:cd51ccf0aea0bc31b11ff4f288751fc7df0f0dd081860efc305182ea61f842e4",
+    "validator_semantics_digest": "sha256:c724eaa9f3b52e1a5ba4aa5aaeb5e8b61a744818b2f56fd8ff52dfa5e1e584df"
   },
   "files": [
     {
       "path": "compatibility/sandbox-runtime/contract.lock.json",
-      "sha256": "sha256:01bf9bd536714d907e81610f8fa09d337bb59b239c0e155b9156b3128c718b80"
+      "sha256": "sha256:ae6a1629408d35fd6857b02581706b1cc7d9e009e290226d278bd785632b5231"
     },
     {
       "path": "contract/compatibility/contract-manifest.json",
-      "sha256": "sha256:23405c62747b6c678d2fcc84dfd885e435ab12771befdb29499b2e7367404da1"
+      "sha256": "sha256:1e17e0ef4f86e03be1dac22c48e7b556a8600a4baa6252f4514390d339b8ba3f"
     },
     {
       "path": "contract/openapi/sandbox-runtime-provider-v1.yaml",
-      "sha256": "sha256:08261369d39bb6837759ab4b95f460df3b6c3feb51fbc56d38fe393ce69be2ca"
+      "sha256": "sha256:64f0f8d93de39217f5d684758c1407ba62df16f274137d1855821df9dd004a1d"
     },
     {
       "path": "contract/semantic-rules/provider-v1.json",
-      "sha256": "sha256:b9d3706db2d5c6fa0cfe4a389bb2ad4718daecca076d660c2e7985795e6c1999"
+      "sha256": "sha256:8757107d5b44451bcb1bdae223262cb870f92b3a6c6fed0e6fef7ebf8f15587e"
     },
     {
       "path": "contract/specification/provider-calling-standard-v1.md",
-      "sha256": "sha256:06a5e9d9bbf59a36a1f9a85dcb9bf6039c8c64a20648dad1ea8591c2effd1bfe"
+      "sha256": "sha256:f52285ab1ab46f80dad5da7b428d049c56afd678179dfeb31c317b2e82f5ed2b"
     },
     {
       "path": "contract/schemas/provider-capabilities.schema.json",
@@ -124,7 +124,7 @@
     },
     {
       "path": "contract/schemas/admission-context.schema.json",
-      "sha256": "sha256:f5c41e34fe2a09b010bf566faf425439bd3aedc0d0776cb90ff73a548f0fa448"
+      "sha256": "sha256:a71646d3fdb06596b83fc7ffa778102a62cf51eecfa9e886f92325c034ad0e32"
     },
     {
       "path": "contract/schemas/admission-target.schema.json",
@@ -136,7 +136,7 @@
     },
     {
       "path": "contract/schemas/protected-operation-jws-claims.schema.json",
-      "sha256": "sha256:fa2d93a29a420e0cd8dd5357961fcbba4170c514cee0786bbcbabe32184f8e40"
+      "sha256": "sha256:717b068fe5044bdc7ea11dec2fb275bf08b7e1a464495dda22eddd2ec14c4214"
     },
     {
       "path": "contract/schemas/create-sandbox-request.schema.json",
@@ -156,7 +156,7 @@
     },
     {
       "path": "contract/fixtures/capabilities-coding-shell.json",
-      "sha256": "sha256:819087a2e25c62db2e23614b067c3393fed7f46200a2884231253e79d3cd5334"
+      "sha256": "sha256:15790c71a3e78a36f5a6664b02ae18297780c621582d4a70c0cd4b06c69639cc"
     },
     {
       "path": "contract/fixtures/create-sandbox-request.json",
@@ -188,7 +188,7 @@
     },
     {
       "path": "contract/conformance/provider-v1/suite.json",
-      "sha256": "sha256:32862a8a7f8d8e9d7b08efc95042dd6814d62e8826a5396aca594a6631a2e4ac"
+      "sha256": "sha256:d02d979cef5bc547bd8b5eaad8ceb1f9957a053bd9b699ec2cb43b6d7fde534e"
     },
     {
       "path": "contract/conformance/provider-remote-v1/suite.json",
@@ -196,7 +196,7 @@
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/profile.json",
-      "sha256": "sha256:7e7f5903264f81c801c4f8b21eb0fd16bd0152dafeeee2d6d8af7b82f7af44e0"
+      "sha256": "sha256:d00947a6067c22e7f791ba7b94e99686c52d15c4836543c961e3044077babcf8"
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/profile.schema.json",
@@ -204,11 +204,11 @@
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/adapter-protocol.schema.json",
-      "sha256": "sha256:0c3783bb4014d1e04d61f1987fa77f0c27a158c65552704f69f3f340bbaa6b20"
+      "sha256": "sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969"
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/adapter-protocol.semantics.json",
-      "sha256": "sha256:deeef0edf5cc63705d84e45a8f64f657e97346a3616259c2d8b718b1e38b0bd5"
+      "sha256": "sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662"
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/adapter-transcript.schema.json",
@@ -216,11 +216,11 @@
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/report.schema.json",
-      "sha256": "sha256:0fef4381588ace43c63ee6aaba0f9ddfa192af3c03353c1a13e00344bc416f3f"
+      "sha256": "sha256:cd51ccf0aea0bc31b11ff4f288751fc7df0f0dd081860efc305182ea61f842e4"
     },
     {
       "path": "qualification/external-caller-coding-shell-v1/validator.semantics.json",
-      "sha256": "sha256:2cccf9502c1521ee3afe35478b0359fa9cf03eda6ef5b0c5130ed8ff6fd8daf2"
+      "sha256": "sha256:c724eaa9f3b52e1a5ba4aa5aaeb5e8b61a744818b2f56fd8ff52dfa5e1e584df"
     }
   ]
 }

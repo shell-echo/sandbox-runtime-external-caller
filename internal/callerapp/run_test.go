@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callercontrol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerphase"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerstate"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerterminal"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/protocol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/testcredentials"
@@ -59,6 +61,14 @@ func (service *recordingService) Stop(context.Context) error {
 }
 
 func (service *recordingService) Wait() error { return nil }
+
+func (service *recordingService) SetBackend(callerterminal.BackendOpener) error { return nil }
+
+func (service *recordingService) IssueGrant(context.Context, string, string, string, string, time.Time) (string, error) {
+	return strings.Repeat("A", 43), nil
+}
+
+func (service *recordingService) Revoke(context.Context, string, string) error { return nil }
 
 func TestRunConsumesControlAndCredentialPipes(t *testing.T) {
 	descriptors, writers := callerCredentialPipes(t)
@@ -108,6 +118,13 @@ func TestRunRejectsArgumentsAndMalformedControlWithoutOutput(t *testing.T) {
 				t.Fatalf("rejected caller output = %q", output.Bytes())
 			}
 		})
+	}
+}
+
+func TestRunWithScenariosRejectsNilParentBeforeInput(t *testing.T) {
+	var output bytes.Buffer
+	if code := RunWithScenarios(nil, nil, bytes.NewReader(nil), &output, nil); code != ExitSoftware || output.Len() != 0 {
+		t.Fatalf("RunWithScenarios(nil parent) = %d, %q", code, output.Bytes())
 	}
 }
 
@@ -269,12 +286,27 @@ func fixedCallerDescriptors() []protocol.ChannelDescriptor {
 	return descriptors
 }
 
-func fakeProviderPhase(_ context.Context, phase, _ string, _ *credentials.Bundle, store *callerstate.Store) error {
+func fakeProviderPhase(_ context.Context, phase, _ string, _ *credentials.Bundle, store *callerstate.Store) (*callerterminal.Authority, error) {
 	if phase == "reconstruction" {
-		return nil
+		return nil, nil
 	}
 	if err := store.BindCapabilities("provider-revision-1", []byte(`{"capabilities":[]}`), "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "2026-09-12T00:00:00Z"); err != nil {
-		return err
+		return nil, err
 	}
-	return store.BindLifecycle(1)
+	if err := store.BindLifecycle(1); err != nil {
+		return nil, err
+	}
+	if err := store.BindExec(2, "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"); err != nil {
+		return nil, err
+	}
+	if err := store.BindTerminal(3, "runtime-session-1", "ref:session:synthetic"); err != nil {
+		return nil, err
+	}
+	state := store.Snapshot()
+	return &callerterminal.Authority{
+		ProviderRevisionID: state.Provider.ProviderRevisionID, SandboxID: state.Plan.SandboxID,
+		OperationID: state.Terminal.Operation.OperationID, AttemptID: state.Terminal.Operation.AttemptID, FencingToken: 3,
+		RuntimeSessionID: state.Terminal.RuntimeSessionID, HandoffReference: state.Terminal.HandoffReference,
+		ExpiresAt: time.Now().Add(time.Minute),
+	}, nil
 }

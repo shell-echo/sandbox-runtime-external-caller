@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -32,6 +33,7 @@ var (
 	ErrResponseTooLarge = errors.New("provider response exceeds the caller limit")
 	ErrContentType      = errors.New("provider response media type is not application/json")
 	ErrUnexpectedStatus = errors.New("provider returned a status outside the locked OpenAPI operation")
+	ErrTLSRejected      = errors.New("provider TLS peer rejected the connection")
 )
 
 type HTTPError struct {
@@ -175,6 +177,121 @@ func (c *Client) GetOperation(ctx context.Context, descriptor ReadDescriptor, ad
 	return operation, nil
 }
 
+func (c *Client) CreateExec(ctx context.Context, sandboxID string, requestDocument ExecRequest, admission Admission) (ProviderOperation, error) {
+	bound, err := BindExecRequest(requestDocument)
+	if err != nil || bound.RequestDigest != requestDocument.RequestDigest {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	if err := validateMutationAdmission(bound.OperationID, bound.AttemptID, bound.FencingToken, bound.RequestDigest, bound.DeadlineAt, sandboxID, admission, "exec", ExecRequestContractID, "/v1/sandboxes/"+sandboxID+"/exec"); err != nil {
+		return ProviderOperation{}, err
+	}
+	body, err := marshalJSON(bound)
+	if err != nil || len(body) > 262144 {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	request, err := c.newRequest(ctx, http.MethodPost, "/v1/sandboxes/"+sandboxID+"/exec", body, &admission)
+	if err != nil {
+		return ProviderOperation{}, err
+	}
+	response, err := c.do(request, http.StatusAccepted, statusSet(400, 401, 403, 409, 422, 429, 503))
+	if err != nil {
+		return ProviderOperation{}, err
+	}
+	var operation ProviderOperation
+	if err := decodeProviderOperation(response, &operation); err != nil {
+		return ProviderOperation{}, err
+	}
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "exec" || operation.Status != "accepted" {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	return operation, nil
+}
+
+func (c *Client) GetExecResult(ctx context.Context, descriptor ReadDescriptor, admission Admission) (ExecResult, error) {
+	if descriptor.Operation != "read_result" || validateReadAdmission(descriptor, admission, ExecResultDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/exec-result") != nil {
+		return ExecResult{}, ErrAdmissionBinding
+	}
+	request, err := c.newRequest(ctx, http.MethodGet, "/v1/operations/"+descriptor.OperationID+"/exec-result", nil, &admission)
+	if err != nil {
+		return ExecResult{}, err
+	}
+	response, err := c.do(request, http.StatusOK, statusSet(400, 401, 403, 404, 410, 503))
+	if err != nil {
+		return ExecResult{}, err
+	}
+	var result ExecResult
+	if err := decodeExecResult(response, &result); err != nil {
+		return ExecResult{}, err
+	}
+	if result.OperationID != descriptor.OperationID || result.AttemptID != descriptor.AttemptID || result.FencingToken != descriptor.FencingToken || result.SandboxID != descriptor.SandboxID {
+		return ExecResult{}, ErrInvalidContractDocument
+	}
+	return result, nil
+}
+
+func (c *Client) OpenRuntimeSession(ctx context.Context, sandboxID string, requestDocument RuntimeSessionOpenRequest, admission Admission) (ProviderOperation, error) {
+	bound, err := BindRuntimeSessionOpenRequest(requestDocument)
+	if err != nil || bound.RequestDigest != requestDocument.RequestDigest {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	if err := validateMutationAdmission(bound.OperationID, bound.AttemptID, bound.FencingToken, bound.RequestDigest, bound.DeadlineAt, sandboxID, admission, "open_runtime_session", RuntimeSessionRequestContractID, "/v1/sandboxes/"+sandboxID+"/runtime-sessions"); err != nil {
+		return ProviderOperation{}, err
+	}
+	body, err := marshalJSON(bound)
+	if err != nil || len(body) > 65536 {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	request, err := c.newRequest(ctx, http.MethodPost, "/v1/sandboxes/"+sandboxID+"/runtime-sessions", body, &admission)
+	if err != nil {
+		return ProviderOperation{}, err
+	}
+	response, err := c.do(request, http.StatusAccepted, statusSet(400, 401, 403, 409, 422, 429, 503))
+	if err != nil {
+		return ProviderOperation{}, err
+	}
+	var operation ProviderOperation
+	if err := decodeProviderOperation(response, &operation); err != nil {
+		return ProviderOperation{}, err
+	}
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "open_runtime_session" || operation.Status != "accepted" {
+		return ProviderOperation{}, ErrInvalidContractDocument
+	}
+	return operation, nil
+}
+
+func validateMutationAdmission(operationID, attemptID string, fencing int64, digest, deadline, sandboxID string, admission Admission, operation, contractID, path string) error {
+	if validateAdmissionEnvelope(admission) != nil {
+		return ErrAdmissionBinding
+	}
+	c := admission.Context
+	if c.SandboxID != sandboxID || c.DeadlineAt != deadline || c.Operation != operation || c.OperationID != operationID || c.AttemptID != attemptID || c.FencingToken != fencing || c.RequestContractID != contractID || c.RequestDigestProfile != MutationDigestProfile || c.RequestDigest != digest || c.HTTPTarget.Method != http.MethodPost || c.HTTPTarget.Path != path {
+		return ErrAdmissionBinding
+	}
+	return nil
+}
+
+func (c *Client) GetRuntimeSessionHandoff(ctx context.Context, descriptor ReadDescriptor, admission Admission) (RuntimeSessionHandoff, error) {
+	if descriptor.Operation != "read_runtime_session" || validateReadAdmission(descriptor, admission, SessionDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/runtime-session") != nil {
+		return RuntimeSessionHandoff{}, ErrAdmissionBinding
+	}
+	request, err := c.newRequest(ctx, http.MethodGet, "/v1/operations/"+descriptor.OperationID+"/runtime-session", nil, &admission)
+	if err != nil {
+		return RuntimeSessionHandoff{}, err
+	}
+	response, err := c.do(request, http.StatusOK, statusSet(400, 401, 403, 404, 410, 503))
+	if err != nil {
+		return RuntimeSessionHandoff{}, err
+	}
+	var handoff RuntimeSessionHandoff
+	if err := decodeRuntimeSessionHandoff(response, &handoff); err != nil {
+		return RuntimeSessionHandoff{}, err
+	}
+	if handoff.OperationID != descriptor.OperationID || handoff.AttemptID != descriptor.AttemptID || handoff.FencingToken != descriptor.FencingToken || handoff.SandboxID != descriptor.SandboxID {
+		return RuntimeSessionHandoff{}, ErrInvalidContractDocument
+	}
+	return handoff, nil
+}
+
 func (c *Client) newRequest(ctx context.Context, method, path string, body []byte, admission *Admission) (*http.Request, error) {
 	if ctx == nil {
 		return nil, ErrTransport
@@ -212,7 +329,14 @@ func validateAdmissionAt(admission Admission, now time.Time) error {
 
 func (c *Client) do(request *http.Request, successStatus int, errorStatuses map[int]struct{}) ([]byte, error) {
 	response, err := c.http.Do(request)
-	if err != nil || response == nil || response.Body == nil {
+	if err != nil {
+		var alert tls.AlertError
+		if errors.As(err, &alert) {
+			return nil, ErrTLSRejected
+		}
+		return nil, ErrTransport
+	}
+	if response == nil || response.Body == nil {
 		return nil, ErrTransport
 	}
 	defer response.Body.Close()
@@ -369,6 +493,29 @@ func decodeSandboxStatus(document []byte, target *SandboxStatus) error {
 		return ErrInvalidContractDocument
 	}
 	return validateSandboxStatus(*target)
+}
+
+func decodeExecResult(document []byte, target *ExecResult) error {
+	object, err := decodeStrict(document, target, []string{"operation_id", "attempt_id", "fencing_token", "sandbox_id", "status", "started_at", "completed_at", "retained_until"}, []string{"signal", "stdout_reference", "stderr_reference", "error"})
+	if err != nil {
+		return err
+	}
+	for _, name := range []string{"signal", "stdout_reference", "stderr_reference"} {
+		if raw, present := object[name]; present && bytes.Equal(raw, []byte(`""`)) {
+			return ErrInvalidContractDocument
+		}
+	}
+	if raw, ok := object["error"]; ok && !objectShape(raw, []string{"code", "message", "retryable", "outcome"}, []string{"provider_code", "details"}) {
+		return ErrInvalidContractDocument
+	}
+	return validateExecResult(*target)
+}
+
+func decodeRuntimeSessionHandoff(document []byte, target *RuntimeSessionHandoff) error {
+	if _, err := decodeStrict(document, target, []string{"operation_id", "attempt_id", "fencing_token", "sandbox_id", "runtime_session_id", "runtime_type", "capability_profile_id", "protocol", "internal_endpoint_reference", "connection_generation", "expires_at"}, nil); err != nil {
+		return err
+	}
+	return validateRuntimeSessionHandoff(*target)
 }
 
 func decodeStandardError(document []byte, target *StandardError) error {

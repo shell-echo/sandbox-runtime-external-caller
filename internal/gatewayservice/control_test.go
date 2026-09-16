@@ -57,6 +57,32 @@ func TestBootstrapClosedAndDistinctFromValidation(t *testing.T) {
 	}
 }
 
+func TestTerminalBootstrapRequiresDistinctBackendDescriptor(t *testing.T) {
+	bootstrap := testBootstrap(t)
+	bootstrap.ProtocolID = TerminalProtocolID
+	bootstrap.BackendDescriptor = 6
+	var buffer bytes.Buffer
+	if err := EncodeBootstrap(&buffer, bootstrap); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := DecodeBootstrap(buffer.Bytes()); err != nil || got.BackendDescriptor != 6 {
+		t.Fatalf("terminal bootstrap roundtrip: %v", err)
+	}
+	raw := buffer.String()
+	for name, value := range map[string]string{
+		"missing":          strings.Replace(raw, `,"backend_descriptor":6`, "", 1),
+		"control alias":    strings.Replace(raw, `"backend_descriptor":6`, `"backend_descriptor":5`, 1),
+		"credential alias": strings.Replace(raw, `"backend_descriptor":6`, `"backend_descriptor":3`, 1),
+		"stdio":            strings.Replace(raw, `"backend_descriptor":6`, `"backend_descriptor":1`, 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := DecodeBootstrap([]byte(value)); err == nil {
+				t.Fatal("accepted invalid terminal bootstrap")
+			}
+		})
+	}
+}
+
 func TestCommandFramingClosedVariantsAndBounds(t *testing.T) {
 	commands := []Command{
 		{Sequence: 1, Action: "install_policy", TenantA: "tenant-a", TenantB: "tenant-b"},

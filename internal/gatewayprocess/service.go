@@ -13,7 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerterminal"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewaybridge"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewaycontrol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewayservice"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/protocol"
@@ -149,12 +151,43 @@ func (runner *ServiceRunner) Start(parent context.Context, phase, endpoint strin
 		_ = stdoutWriter.Close()
 		return nil, ErrProcessIO
 	}
+	backendParent, backendChild, err := openBackendPair()
+	if err != nil {
+		closeFiles(credentialReaders)
+		closeFiles(credentialWriters)
+		_ = controlReader.Close()
+		_ = controlWriter.Close()
+		_ = stdinReader.Close()
+		_ = stdinWriter.Close()
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		_ = stderrReader.Close()
+		_ = stderrWriter.Close()
+		return nil, ErrProcessIO
+	}
+	bridge, err := gatewaybridge.NewServer(parent, backendParent)
+	if err != nil {
+		_ = backendParent.Close()
+		_ = backendChild.Close()
+		closeFiles(credentialReaders)
+		closeFiles(credentialWriters)
+		_ = controlReader.Close()
+		_ = controlWriter.Close()
+		_ = stdinReader.Close()
+		_ = stdinWriter.Close()
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		_ = stderrReader.Close()
+		_ = stderrWriter.Close()
+		return nil, ErrProcessIO
+	}
 	cleanupParent := func() {
 		closeFiles(credentialWriters)
 		_ = controlWriter.Close()
 		_ = stdinWriter.Close()
 		_ = stdoutReader.Close()
 		_ = stderrReader.Close()
+		_ = bridge.Close()
 	}
 	cleanupChild := func() {
 		closeFiles(credentialReaders)
@@ -162,6 +195,7 @@ func (runner *ServiceRunner) Start(parent context.Context, phase, endpoint strin
 		_ = stdinReader.Close()
 		_ = stdoutWriter.Close()
 		_ = stderrWriter.Close()
+		_ = backendChild.Close()
 	}
 
 	request, err := gatewaycontrol.NewRequest(phase, endpoint, descriptors)
@@ -171,13 +205,13 @@ func (runner *ServiceRunner) Start(parent context.Context, phase, endpoint strin
 		return nil, ErrProcessResult
 	}
 	bootstrap := gatewayservice.Bootstrap{
-		ProtocolID: gatewayservice.ProtocolID, Bootstrap: request,
-		ControlDescriptor: 3 + len(requirements), Deadline: deadline.UTC(),
+		ProtocolID: gatewayservice.TerminalProtocolID, Bootstrap: request,
+		ControlDescriptor: 3 + len(requirements), BackendDescriptor: 4 + len(requirements), Deadline: deadline.UTC(),
 	}
 	command := exec.Command(runner.executable)
 	command.Args = []string{runner.executable}
 	command.Env = []string{}
-	command.ExtraFiles = append(credentialReaders, controlReader)
+	command.ExtraFiles = append(append(append([]*os.File{}, credentialReaders...), controlReader), backendChild)
 	command.Stdin = stdinReader
 	command.Stdout = stdoutWriter
 	command.Stderr = stderrWriter
@@ -199,6 +233,7 @@ func (runner *ServiceRunner) Start(parent context.Context, phase, endpoint strin
 		done:            make(chan struct{}),
 		terminalDone:    make(chan struct{}),
 		shutdownTimeout: runner.boundedShutdownTimeout(),
+		bridge:          bridge,
 	}
 	go service.waitProcess()
 	go service.watchParent(parent)
@@ -281,6 +316,17 @@ type Service struct {
 	shutdownTimeout time.Duration
 	abortOnce       sync.Once
 	terminalOnce    sync.Once
+	bridge          *gatewaybridge.Server
+}
+
+func (service *Service) SetBackend(opener callerterminal.BackendOpener) error {
+	if service == nil || service.bridge == nil || opener == nil {
+		return ErrServiceState
+	}
+	if err := service.bridge.SetOpener(opener); err != nil {
+		return ErrServiceState
+	}
+	return nil
 }
 
 func (service *Service) PID() int {
@@ -570,6 +616,7 @@ func (service *Service) waitProcess() {
 	}
 	_ = service.control.Close()
 	_ = service.stderr.Close()
+	_ = service.bridge.Close()
 	service.stateMu.Lock()
 	service.waitErr = waitErr
 	service.stderrResult = result

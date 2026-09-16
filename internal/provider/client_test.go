@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
@@ -170,6 +171,30 @@ func TestClientReturnsOnlyLockedErrorShapeAndRetryAfter(t *testing.T) {
 	}
 }
 
+func TestClientDistinguishesPeerTLSAlertFromGenericTransportFailure(t *testing.T) {
+	for name, transportError := range map[string]error{
+		"tls rejected":   tls.AlertError(42),
+		"network failed": errors.New("synthetic network failure"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			client, err := NewClient("https://provider.example", roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return nil, transportError
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = client.DiscoverCapabilities(context.Background())
+			want := ErrTransport
+			if name == "tls rejected" {
+				want = ErrTLSRejected
+			}
+			if !errors.Is(err, want) {
+				t.Fatalf("transport error = %v, want %v", err, want)
+			}
+		})
+	}
+}
+
 func TestClientRejectsResponseAmbiguityAndLimits(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -256,7 +281,7 @@ func testCapabilities() ProviderCapabilities {
 		ProviderRevisionID: "provider-revision-local-v1", APIVersion: "v1",
 		Capabilities:            []Capability{{ID: "sandbox.exec", Versions: []string{"1.0.0"}, Profiles: []string{"exec-v1"}}, {ID: "sandbox.terminal", Versions: []string{"1.0.0"}, Profiles: []string{"terminal-v1"}}},
 		RuntimeProfiles:         []RuntimeProfile{{ID: "sandbox-runtime-coding-shell-v1", IsolationClass: "container", RuntimeClassName: "sandbox-runtime-coding-shell", Architecture: []string{"amd64"}, CapabilityProfileIDs: []string{"exec-v1", "terminal-v1"}}},
-		SnapshotRestoreProfiles: []SnapshotRestoreProfile{{ProfileID: "sandbox-snapshot-workspace-v1", Level: "workspace", SuiteID: "sandbox-provider", SuiteVersion: "1.0.0", SuiteDigest: "sha256:bf177a5bd2b4228605b3ebc311d25a1cc348d9548b2b5c2d333a0c69e71ca528"}},
+		SnapshotRestoreProfiles: []SnapshotRestoreProfile{{ProfileID: "sandbox-snapshot-workspace-v1", Level: "workspace", SuiteID: "sandbox-provider", SuiteVersion: "1.0.0", SuiteDigest: "sha256:b40c932643f4a1e5fd6681e3abf9b64a607609866a6254456970f8b8034cf2a8"}},
 		Limits:                  ProviderLimits{MaxCPUMillis: 1000, MaxMemoryBytes: 1073741824, MaxEphemeralStorageBytes: 1073741824, MaxWorkspaceBytes: &workspace, MaxGPUCount: &gpu, MaxLeaseSeconds: 3600, MaxExecSeconds: 300},
 	}
 }

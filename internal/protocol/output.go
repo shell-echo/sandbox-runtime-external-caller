@@ -119,6 +119,22 @@ type ScenarioResult struct {
 	ReasonCode      *string             `json:"reason_code"`
 }
 
+// ValidateScenarioResultData applies the locked public output shape without
+// assigning sequence or invocation identity. Private caller supervision uses
+// it before forwarding data into the phase machine.
+func ValidateScenarioResultData(phase string, data ScenarioResultData) error {
+	result := ScenarioResult{
+		FormatVersion: FormatVersion, ProtocolID: ProtocolID, ProtocolVersion: ProtocolVersion,
+		MessageType: "scenario_result", Sequence: 2, InvocationID: "private-validation", Phase: phase,
+		CaseID: data.CaseID, Disposition: data.Disposition, Interactions: data.Interactions,
+		Assertions: data.Assertions, ObservationIDs: data.ObservationIDs, ReasonCode: data.ReasonCode,
+	}
+	if !validScenarioResult(result) {
+		return ErrSchema
+	}
+	return nil
+}
+
 type InvocationFinished struct {
 	FormatVersion   int    `json:"format_version"`
 	ProtocolID      string `json:"protocol_id"`

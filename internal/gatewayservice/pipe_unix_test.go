@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+func TestOpenBackendPipeAdoptsSocket(t *testing.T) {
+	descriptors, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer syscall.Close(descriptors[1])
+	pipe, err := OpenBackendPipe(descriptors[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pipe.Close()
+}
+
 func TestInheritedCommandPipeSupportsDeadlineAndClose(t *testing.T) {
 	reader, writer, err := os.Pipe()
 	if err != nil {

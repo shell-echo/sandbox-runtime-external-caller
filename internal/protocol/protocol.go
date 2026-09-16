@@ -15,13 +15,13 @@ const (
 	ProtocolID      = "sandbox-runtime-external-caller-adapter-v1"
 	ProtocolVersion = "1.0.0"
 
-	ProtocolSchemaDigest    = "sha256:0c3783bb4014d1e04d61f1987fa77f0c27a158c65552704f69f3f340bbaa6b20"
-	ProtocolSemanticsDigest = "sha256:deeef0edf5cc63705d84e45a8f64f657e97346a3616259c2d8b718b1e38b0bd5"
-	ContractRevision        = "9206e601f75a54db0b66969239d7e8cc5bcc8af9"
-	ContractTree            = "c5e4221f2ceaaaad53c8038e1ebaacfe0c5a4daf"
+	ProtocolSchemaDigest    = "sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969"
+	ProtocolSemanticsDigest = "sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662"
+	ContractRevision        = "22ba6987ea5fbc37d53942720133c0acad199edd"
+	ContractTree            = "c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38"
 	ProfileID               = "sandbox-runtime-external-caller-coding-shell-v1"
 	ProfileVersion          = "1.0.0"
-	ProfileDigest           = "sha256:baee769c0acc395448af61faef99cd97fbb63ccb83c70eb51915952be519991a"
+	ProfileDigest           = "sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14"
 
 	MaxInvocationBytes          = 32 << 10
 	MaxAdapterOutputRecordBytes = 64 << 10

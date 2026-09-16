@@ -11,6 +11,7 @@ import (
 
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callercontrol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerstate"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerterminal"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
 )
 
@@ -22,9 +23,10 @@ var (
 	ErrGatewayLifecycle = errors.New("caller Gateway lifecycle failed")
 )
 
-// GatewayService is the narrow service surface needed before Provider
-// scenarios exist. Stop must include terminal reply, EOF, clean exit and reap.
+// GatewayService owns policy and transient grants. Stop must include terminal
+// reply, EOF, clean exit and reap.
 type GatewayService interface {
+	callerterminal.Gateway
 	InstallPolicy(context.Context, string, string) error
 	Stop(context.Context) error
 	Wait() error
@@ -32,14 +34,16 @@ type GatewayService interface {
 
 type StartGateway func(context.Context, string, string, *credentials.Bundle) (GatewayService, error)
 
-type RunProvider func(context.Context, string, string, *credentials.Bundle, *callerstate.Store) error
+type RunProvider func(context.Context, string, string, *credentials.Bundle, *callerstate.Store) (*callerterminal.Authority, error)
 
 // Coordinate validates the phase deadline before touching caller state. The
 // initial phase creates one planned state in an empty root and advances it to
-// lifecycle_bound through the injected Provider runner. Reconstruction accepts
+// terminal_bound through the injected Provider runner. Reconstruction accepts
 // only an already complete initial state and must not mutate it. Both paths
 // start the live Gateway, install the caller-owned tenant policy, stop and reap
 // it, and prove the resulting state remains unchanged after Provider work.
+// Initial also issues and revokes a grant from fresh terminal authority before
+// stopping. A failed grant lifecycle cancels and reaps the service.
 func Coordinate(parent context.Context, request callercontrol.Request, bundle *credentials.Bundle, start StartGateway, runProvider RunProvider) error {
 	if parent == nil || bundle == nil || start == nil || runProvider == nil {
 		return ErrGatewayLifecycle
@@ -102,8 +106,24 @@ func Coordinate(parent context.Context, request callercontrol.Request, bundle *c
 	if err := service.InstallPolicy(phaseContext, state.Plan.TenantAID, state.Plan.TenantBID); err != nil {
 		return preserveContextError(phaseContext, err)
 	}
-	if err := runProvider(phaseContext, request.Phase, request.ProviderOrigin, bundle, store); err != nil {
+	terminal, err := runProvider(phaseContext, request.Phase, request.ProviderOrigin, bundle, store)
+	if err != nil {
 		return preserveContextError(phaseContext, err)
+	}
+	if terminal != nil {
+		defer terminal.Close()
+	}
+	if request.Phase == "initial" {
+		current := store.Snapshot()
+		if current.Stage != callerstate.StageTerminalBound || current.Provider == nil || current.Lifecycle == nil || current.Exec == nil || current.Terminal == nil || !reflect.DeepEqual(current.Plan, state.Plan) || store.ValidateUnchanged() != nil {
+			return ErrPhaseState
+		}
+		if err := callerterminal.GrantAndRevoke(phaseContext, current, terminal, service); err != nil {
+			return preserveContextError(phaseContext, err)
+		}
+	} else if terminal != nil {
+		// Reconstruction has no freshly validated terminal authority yet.
+		return ErrPhaseState
 	}
 	if err := service.Stop(phaseContext); err != nil {
 		return preserveContextError(phaseContext, err)
@@ -112,7 +132,7 @@ func Coordinate(parent context.Context, request callercontrol.Request, bundle *c
 	finalState := store.Snapshot()
 	switch request.Phase {
 	case "initial":
-		if finalState.Stage != callerstate.StageLifecycleBound || finalState.Provider == nil || finalState.Lifecycle == nil || !reflect.DeepEqual(finalState.Plan, state.Plan) {
+		if finalState.Stage != callerstate.StageTerminalBound || finalState.Provider == nil || finalState.Lifecycle == nil || finalState.Exec == nil || finalState.Terminal == nil || !reflect.DeepEqual(finalState.Plan, state.Plan) {
 			return ErrPhaseState
 		}
 	case "reconstruction":

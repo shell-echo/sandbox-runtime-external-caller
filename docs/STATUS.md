@@ -1,24 +1,47 @@
 # Status
 
-Current checkpoint: **e1.6b Provider lifecycle composition complete**. The
-operational external caller now combines strict phase state, protected Provider
-capability/create reconciliation and the live Gateway lifecycle. Of the 13
-checkpoints in [`PLAN.md`](PLAN.md), 6 are complete and **7 remain**; e1.6c is next. Sections
+Current checkpoint: **e1.7b complete as local candidate composition; all 5
+locked reconstruction cases are locally composed**. All 15 initial cases remain
+complete locally. A fresh
+reconstruction command path rediscovers the exact retained capability snapshot,
+reconciles the retained create operation and generation-one ready sandbox, then
+matches the retained exec, usage and artifact documents to the three Caller
+digests, validates the retained terminal handoff, and reconnects through the
+reconstructed Gateway while leaving state at `initial_complete` revision six.
+Of the 13 checkpoints in [`PLAN.md`](PLAN.md), 9 are complete and **4 remain**. Sections
 below record evidence at each checkpoint, not simultaneous current claims.
+
+Current pinned authority: Provider Contract revision
+`22ba6987ea5fbc37d53942720133c0acad199edd`, tree
+`c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38`, 53-case local Suite
+`sha256:b40c932643f4a1e5fd6681e3abf9b64a607609866a6254456970f8b8034cf2a8`,
+profile `sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14`,
+report schema `sha256:cd51ccf0aea0bc31b11ff4f288751fc7df0f0dd081860efc305182ea61f842e4`,
+validator semantics `sha256:c724eaa9f3b52e1a5ba4aa5aaeb5e8b61a744818b2f56fd8ff52dfa5e1e584df`,
+adapter schema `sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969`,
+and adapter semantics
+`sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662`.
+The raw authority-lock digest is
+`sha256:5916b07719cc9320a021bbc96669f4a0c0a1d50a8301e9ab69f9fa248cdc03cf`.
+The authority verifier passes against the adjacent Provider source; the refresh
+is uncommitted candidate state and provides no source/build provenance or
+qualification result.
 
 ## e1.1 external-caller candidate foundation
 
 Status: **local candidate only**.
 
-The repository is a separate, uncommitted Git working tree. Its authority lock
-pins the current Provider Contract, qualification profile, adapter protocol,
-transcript projection, report schema, and validator semantics. The verifier
-checks the exact lock and all named upstream public-file bytes. Tests reject a
-direct import of any `github.com/shell-echo/sandbox-runtime` package.
+The repository is separate from the Provider repository. Its current authority
+refresh is uncommitted. The lock pins the Provider Contract, qualification
+profile, adapter protocol, transcript projection, report schema, and validator
+semantics. The verifier checks the exact lock and all named upstream public-file
+bytes. Tests reject a direct import of any
+`github.com/shell-echo/sandbox-runtime` package.
 
 Not established: an external owner, independent source hosting, a hosted build
-or attestation, caller/adapter/Gateway artifacts, behavior, interoperability,
-15+5 execution, teardown, evidence archive, or qualification outcome.
+or attestation, immutable release artifacts, independent runtime behavior or
+interoperability, independently supervised 15+5 qualification execution,
+teardown, evidence archive, or qualification outcome.
 
 The next foundation slice is recorded below.
 
@@ -585,6 +608,962 @@ terminal, handoff, the 15+5 scenario outcomes, independent observation,
 release provenance or qualification. The test Provider is owned by this
 candidate repository and is not independent evidence.
 
-Next: **e1.6c**, checkpoint 7/13, compose protected exec, terminal and handoff
-operations with Gateway grant/revocation and real Provider-terminal byte
-forwarding. **7 checkpoints remain** in the fixed plan.
+## e1.6c Exec, usage, terminal and Gateway data-plane composition
+
+Status: **complete as local synthetic/process composition**,
+checkpoint 7/13.
+
+The initial caller requires the exec/terminal client dependency and advances
+from `lifecycle_bound` to `exec_bound` only after a succeeded exec operation,
+a retained completed result with exit code zero, and a separately read usage
+document. Usage must be correlated to the same operation/attempt/fence/sandbox
+and include exactly one runtime-metered or reconciled execution count of one.
+`partial` reconciliation is accepted as partial evidence; `unknown` does not
+justify the binding. `result_digest` and `usage_evidence_digest` are caller
+RFC 8785/SHA-256 digests of the complete decoded documents. The opaque Provider
+`evidence_digest` remains a field in that usage document; the caller does not
+derive usage from the exec result or invent its digest semantics.
+
+The caller then submits a terminal-session request, reconciles its operation
+and reads the handoff before writing `terminal_bound` at store revision five.
+Operation, attempt, fencing, sandbox, session and selected profile must match;
+the opaque reference must satisfy the closed Contract shape and the handoff
+must remain unexpired without extending requested authority. Request deadlines
+are clipped to the phase budget, observed/requested sandbox lease and caller
+limit; exec also respects the advertised execution limit.
+
+Each mutation and read uses its exact Contract identity, HTTP target and fresh
+Admission token. Only explicit retryable 503 reads with positive Retry-After
+within the remaining budget are retried. Mutations are submitted once; a failed,
+expired, inconsistent or cancelled result leaves the prior durable stage and
+does not silently resume an initial run. Reconstruction still requires a fully
+complete state and checks capability/lifecycle continuity only; this sub-slice
+does not add artifact staging or exec/terminal reconstruction acceptance.
+
+The selected runtime must additionally advertise
+`sandbox.terminal-connect@1.0.0` with `terminal-connect-v1` on the same coding
+shell profile. The Caller retains controller mTLS and Admission signing
+material, constructs a fresh `connect_runtime_session` admission over the full
+retained handoff descriptor, and performs the fixed protected WebSocket upgrade
+with `sandbox-runtime-terminal.v1`, compression disabled, binary messages and a
+65,536-byte message bound. Redirects, raw endpoints, query/Origin correlation,
+wrong subprotocol, descriptor mismatch and expired authority fail closed.
+
+The Gateway child receives no Provider credential or origin. Private serving
+protocol v2 adds a separately declared one-connection socket inherited from the
+Caller. After Gateway authorization consumes a grant, the child sends only the
+opaque reference; the Caller cross-checks it against fresh authority, opens the
+Provider stream and relays bytes. Cancellation, revocation, expiry, terminal
+EOF and service stop close both directions. The bridge cannot be rebound or
+reused for a second Provider attach.
+
+Validation on 2026-09-15 uses mise Go and candidate-owned synthetic evidence:
+strict DTO/request/admission tests, stage-retention and cancellation tests,
+fresh-token pending-read retries, a live loopback mTLS/WebSocket Provider
+surface that checks actual HTTP/body/descriptor bindings, and separately built
+adapter/caller/Gateway processes. The initial process tests require three
+operation reads, one exec result, one independent usage read and one handoff,
+plus the exact terminal state. A built production Gateway test proves opaque
+binary round-trip, Provider EOF propagation, cross-actor denial, replay denial,
+expiry, revocation, cancellation and bounded child reap. The current public
+adapter behavior is recorded separately below. No Docker/runtime backend,
+independent observer, release provenance or qualification result is
+established by e1.6c.
+
+The full `go test -race -shuffle=on -count=1 ./...` and `go vet ./...`
+checks passed with mise Go 1.26.5 on Darwin/arm64. The external authority
+verifier, adjacent Provider Contract lock verifier and whitespace checks
+(including new untracked files) passed. All changes remain uncommitted.
+
+## e1.7a-1 Locked capability-discovery scenario
+
+Status: **complete as local candidate composition; superseded operationally by
+the two-case composition below**.
+
+The adapter now emits the first public `scenario_started` before any scenario
+request, launches one separately supervised Caller with a closed private
+single-scenario request, and accepts only an invocation/phase/case/PID-bound,
+schema-valid completed result. The private request carries no expected Contract
+or profile values, assertions, observations, Provider correlations, or secret
+bytes. All nested returned slices and pointers are defensively copied before
+the public phase machine emits them.
+
+The Caller creates fresh strict state and performs exactly three ordered
+Provider interactions: controller A capability discovery, controller B
+capability discovery, and a same-CA but unadmitted identity denial. It requires
+byte-identical admitted documents, the exact embedded Contract/profile
+authority, one atomic coding-shell runtime profile, exact capability versions,
+and either TLS rejection or a closed non-retryable 403 for the unadmitted peer.
+Only explicit retryable 503 responses can be retried, within the absolute
+120-second case deadline. The result is validated before state advances once to
+`capabilities_bound`; no sandbox mutation or Gateway process occurs.
+
+Local race tests cover strict private framing and alias isolation, malformed
+requests/results, TLS-alert versus generic transport classification, capability
+shape negatives, explicit 503 retry, cancellation, real mTLS actors, public
+start-before-request ordering, separate process PID/reap, exact Provider counts,
+and exact ordering of the 14 remaining `not_executed` cases. This remains
+candidate-owned synthetic/component evidence. It does not establish independent
+observations, external provenance, runtime interoperability, a passed scenario,
+or qualification.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Windows/Linux compile checks for the changed process boundaries, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+## e1.7a-2 Protected lifecycle create
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 2/15**.
+
+The private scenario protocol is now v2 and streams two bounded commands and
+results through one supervised Caller process. The adapter publishes each
+locked `scenario_started` before the corresponding private authorization. The
+Caller keeps the credential bundle, state handle and scenario executor alive
+between cases; invocation, phase, case and PID are cross-checked on both
+results. After the second result it requires private stdin EOF, bounded stdout
+and stderr, clean exit and reap.
+
+The protected-create case constructs the request exclusively from the durable
+Caller plan and previously bound capability authority. Controller A supplies
+the exact mTLS identity, Admission Context and compact JWS. The accepted
+operation must bind the planned sandbox, operation, attempt and fencing token.
+Only one explicit retryable 429/503 with positive `Retry-After` may precede the
+final 202, and the identical request and JWS are reused for that wire retry.
+The original request, Admission and operation remain only in Caller memory for
+the following replay case. Durable state correctly stays
+`capabilities_bound`; no operation poll, runtime dispatch conclusion or Gateway
+action is pulled forward from later cases.
+
+Local tests cover v2 multi-record framing, second-command allowlisting,
+start-before-command ordering, second-case failure cleanup, one PID across both
+cases, exact retained replay authority, a retryable 503 followed by a real mTLS
+and Admission-protected 202, unchanged durable state, child EOF/exit/reap, and
+the remaining 13 cases in locked `not_executed` order. These observations are
+candidate-owned component evidence, not independent qualification evidence.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Windows/Linux compile checks for the changed process boundaries, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. One earlier full-suite run hit the unchanged
+five-second historical Gateway-bootstrap limit under parallel race load; that
+exact test then passed ten consecutive runs and the unmodified full suite
+passed. No production deadline was widened. All changes remain uncommitted.
+
+The following bounded slice, e1.7a-3, uses the retained exact JWS for replay
+rejection and a fresh JTI with the identical request for idempotency replay.
+
+## e1.7a-3 Replay semantics
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 3/15**.
+
+Private scenario control is now v3 and keeps one supervised Caller alive for
+the first three locked cases. The adapter emits the replay
+`scenario_started` record before sending its third allowlisted command. The
+Caller rejects missing, reordered or additional cases, cross-checks the same
+invocation/phase/PID on every result, and requires EOF, empty stderr, clean exit
+and reap only after the third result.
+
+The replay case first submits the byte-identical create request with the exact
+retained Admission Context and compact JWS. It requires a closed
+non-retryable 409 with no `Retry-After`; that rejection is not treated as an
+idempotency success. The Caller then signs the unchanged create request and
+Admission Context with a fresh JTI and requires the same accepted logical
+operation. The candidate-owned test Provider separately counts exact-JTI
+rejection, fresh-JTI idempotency replay and runtime dispatch, proving its local
+fixture dispatched only the original create. Durable state remains
+`capabilities_bound` at revision two.
+
+Local tests cover strict three-record framing, ordered public authorization,
+third-case cleanup, one PID across all cases, exact request/JWS reuse, a fresh
+JTI with an unchanged context/body/operation/fence, real mTLS 409/202 traffic,
+one synthetic runtime dispatch, and the remaining 12 cases in locked
+`not_executed` order. These are candidate-owned component observations, not
+independent qualification evidence.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Windows/Linux compile checks for the changed process boundaries, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-4,
+`initial.lifecycle-completion-and-status`, reconciling the retained create
+operation and generation-one ready sandbox before binding lifecycle state.
+**Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-4 Lifecycle completion and status
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 4/15**.
+
+Private scenario control is now v4 and keeps one supervised Caller alive for
+the first four locked initial cases. The adapter emits the lifecycle-completion
+`scenario_started` record before sending the fourth allowlisted command, gives
+the process a bounded 480-second aggregate lifetime, and requires EOF, empty
+stderr, clean exit and reap only after the fourth result.
+
+The fourth case reconciles the exact create operation retained by the preceding
+create/replay cases and then reads sandbox status. Each wire attempt signs a
+fresh read Admission bound to the locked descriptor and route. Only an explicit
+retryable 503 with a positive `Retry-After` is retried, within both the 64-attempt
+wire maximum and the case deadline. The result is emitted only after the create
+operation is `succeeded` and the exact tenant/work-order/sandbox is generation
+one `ready` under the selected runtime profile and a live lease. Only then does
+the Caller commit `lifecycle_bound` revision three. Rejected, inconsistent,
+expired or failed observations preserve `capabilities_bound` revision two.
+
+Local tests cover ordered four-record control, public start-before-command
+authorization, fourth-case cleanup, one PID across all four cases, bounded 503
+read retry with fresh JTIs, accepted/running/succeeded operation polling,
+provisioning/ready status polling, failure-state preservation, real mTLS and
+Admission-protected 200 reads, exact lifecycle binding, and the remaining 11
+cases in locked `not_executed` order. These are candidate-owned component
+observations, not independent qualification evidence.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for the changed process boundaries, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. One first full-suite run hit the unchanged
+five-second historical Gateway-process I/O limit under parallel race load;
+that exact test passed ten consecutive reruns and the unchanged full suite then
+passed. No production deadline was widened. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-5,
+`initial.exec-result-and-usage-evidence`, submitting and reconciling the locked
+exec, reading its retained result and separate usage evidence, and binding only
+their validated decoded documents. **Six large checkpoints remain in the fixed
+plan.**
+
+## e1.7a-5 Exec result and usage evidence
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 5/15**.
+
+Private scenario control is now v5 and keeps one supervised Caller alive for
+the first five locked initial cases. The adapter emits the exec-evidence
+`scenario_started` record before sending the fifth allowlisted command, gives
+the process a bounded 600-second aggregate lifetime, and requires EOF, empty
+stderr, clean exit and reap only after the fifth result.
+
+The fifth case constructs the planned bounded exec under the observed live
+sandbox lease and selected Provider limit. A mutation is repeated at most once
+only after an explicit retryable 429 or 503 with positive `Retry-After`, using
+the byte-identical request and Admission. It then polls the exact exec operation
+with fresh read Admissions and independently reads the retained exec result and
+usage evidence. Only explicit retryable 503 reads with positive `Retry-After`
+are retried within the 64-attempt and case-deadline bounds.
+
+The Caller requires a correlated completed result with zero exit, no signal or
+error, coherent live retention, and a nonempty Contract-valid opaque stdout
+reference. It separately requires correlated, live `complete` or `partial`
+usage evidence with exactly one runtime-metered or reconciled
+`sandbox.exec_count=1` entry. It computes canonical digests over both full
+decoded documents and commits `exec_bound` revision four only after validating
+the complete public result shape. Public scenario evidence contains neither
+command output nor the private opaque reference. Any missing, expired,
+inconsistent or cancelled evidence preserves `lifecycle_bound` revision three.
+
+Local tests cover ordered five-record control, old-v4 rejection, public
+start-before-command authorization, fifth-case cleanup, one PID across all five
+cases, exact mutation retry bytes, fresh read JTIs, operation polling, a
+retryable usage read, missing-output-reference rejection, real mTLS and
+Admission-protected 202/200 traffic, exact result/usage digest binding, and the
+remaining 10 cases in locked `not_executed` order. These are candidate-owned
+component observations, not independent qualification evidence.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for the changed process boundaries, the external
+authority verifier, and the adjacent Provider Contract verifier. Tracked and
+untracked whitespace checks also passed. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-6, `initial.stale-fencing-rejection`, submitting an
+exec with a lower fencing token, requiring a closed non-retryable 409 before
+dispatch, and preserving the accepted exec binding. **Six large checkpoints
+remain in the fixed plan.**
+
+## e1.7a-6 Stale-fencing rejection
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 6/15**.
+
+Private scenario control is now v6 and keeps the supervised Caller alive for
+the first six locked initial cases under a bounded 720-second aggregate
+lifetime. The adapter emits the stale-fencing `scenario_started` record before
+authorizing its private command and reports the remaining 9 initial cases in
+locked `not_executed` order only after the sixth result.
+
+The sixth case requires the retained accepted exec and `exec_bound` revision
+four. It constructs a distinct caller-owned operation, attempt and idempotency
+identity, binds a fresh Admission to the exact request digest, and submits fence
+one below the retained accepted fence two. Only an explicit retryable 429 or
+503 with positive `Retry-After` can cause one byte-identical request and
+Admission replay. A final 409 must carry exactly `SANDBOX_CONFLICT` or
+`SANDBOX_STALE_FENCING_TOKEN`, be non-retryable and omit `Retry-After`; the
+Caller then stops without another attempt. Any accepted, malformed, retryable
+or differently coded response fails closed.
+
+The candidate-owned Provider observer records stale rejections separately
+from exec dispatch. Local unit, live mTLS and separately built process tests
+require exactly one accepted exec dispatch plus one stale rejection, prove the
+non-retryable conflict was not retried, and compare the complete durable state
+before and after the case. The stage remains `exec_bound`, store revision four,
+with the accepted operation/result/usage binding unchanged. These observations
+are local candidate evidence and do not establish independent qualification.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for the changed process boundaries, the external
+authority verifier, and the adjacent Provider Contract verifier. Tracked and
+untracked whitespace checks also passed. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-7, `initial.exec-cancellation`, proving cancellation
+authority, terminal operation state and caller-state preservation under the
+locked case. **Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-7 Exec cancellation
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 7/15**.
+
+Private scenario control is now v7 and keeps one supervised Caller alive for
+the first seven locked initial cases under an 840-second aggregate bound. The
+adapter emits the cancellation `scenario_started` record before its private
+command, forwards the validated five-interaction result, and reports the
+remaining 8 cases `not_executed` only after the seventh result.
+
+The seventh case constructs a distinct fence-three exec whose deadline is
+clipped by the case, selected Provider exec limit, and observed live lease. It
+submits a separately digested fence-four `caller_requested` cancellation bound
+to the exact target operation and attempt. The exec mutation permits at most
+one byte-identical replay after an explicit retryable 429 or 503 with positive
+`Retry-After`; cancellation permits the same only for an explicit retryable
+503. Acceptance of either mutation is not considered final cancellation.
+
+Fresh read Admissions reconcile the `cancel_exec` operation to `succeeded`,
+then the exact target `exec` operation to `cancelled`, and finally read a live,
+correlated retained result whose status is `cancelled`. Unknown operation type,
+identity drift, a different terminal status, malformed or expired result,
+unapproved retry, deadline/cancellation, or premature 202-only completion fails
+closed. The separate cancellation correlations are not reconstruction state;
+the complete accepted `exec_bound` revision four remains unchanged.
+
+Local unit tests cover exact cancellation DTO/digest/Admission/HTTP binding,
+invalid target/reason/generation/digest rejection, bounded exact-authority
+mutation retry, missing cancelled target failure, and durable-state
+preservation. Candidate-owned live mTLS, one-PID process, and actual adapter
+tests require the exact 202/202/200/200/200 interaction order and observe two
+admitted execs, one stale rejection, one cancellation intent, both operation
+reads, and two retained-result reads. This remains local candidate evidence,
+not independent qualification.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-8,
+`initial.terminal-session-and-opaque-handoff`, opening and reconciling the
+locked terminal session and validating its opaque handoff without yet claiming
+Gateway byte round-trip. **Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-8 Terminal session and opaque handoff
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 8/15**.
+
+Private scenario control is now v8 and keeps one supervised Caller alive for
+the first eight locked initial cases under a 960-second aggregate bound. The
+adapter emits the terminal-session `scenario_started` record before its private
+command, forwards the validated three-interaction result, and reports the
+remaining 7 cases `not_executed` only after the eighth result.
+
+The eighth case starts from the accepted `exec_bound` revision four and the
+observed generation-one ready sandbox. It opens the planned terminal session
+with fence five, a request deadline and expiry clipped by the case deadline and
+observed sandbox lease, and Admission bound to the exact digest and Provider
+route. Only one byte-identical retry is permitted after an explicit retryable
+429 or 503 with positive `Retry-After`; acceptance is not treated as completion.
+
+Fresh read Admissions reconcile the exact `open_runtime_session` operation to
+`succeeded` and read the correlated runtime-session handoff. The Caller requires
+terminal type, the selected `terminal-v1` capability profile, WebSocket
+protocol, a Contract-valid opaque reference, positive connection generation,
+and a live expiry no later than requested. It then commits `terminal_bound`
+revision five. The full request, accepted authority, reconciled operation and
+handoff remain only in live Caller memory for the next case; the public result
+contains observation identifiers but not the raw handoff reference.
+
+Local unit tests cover exact result shape, fence progression, durable binding,
+private-authority retention, public redaction, bounded exact-authority mutation
+retry, and malformed, non-WebSocket, expired, extended or zero-generation
+handoff rejection without state transition. Candidate-owned live mTLS,
+one-PID process and actual adapter tests require the exact 202/200/200 sequence
+and observe one session dispatch, one operation read and one handoff read. This
+is local candidate evidence, not independent qualification or terminal byte
+interoperability.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-9,
+`initial.gateway-terminal-byte-round-trip`, using the retained caller-owned
+handoff to issue one Gateway grant and prove the locked authorized byte path.
+**Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-9 Gateway terminal byte round-trip
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 9/15**.
+
+Private scenario control is now v9 and keeps one supervised Caller alive for
+the first nine locked initial cases under a 1080-second aggregate bound. The
+adapter emits the Gateway-round-trip `scenario_started` record before its
+private command, forwards the validated one-interaction result, and reports the
+remaining 6 cases `not_executed` only after the ninth result.
+
+The ninth case consumes the full terminal request, reconciled operation and
+handoff retained by the same Caller process. It starts the actual sibling
+Gateway, installs caller-owned tenant-A/tenant-B policy, binds an opener that
+creates a fresh exact-descriptor Admission for the protected Provider
+WebSocket, and issues one controller-A/tenant-A grant whose expiry is clipped
+to both the handoff and case deadlines. The caller performs exactly one mTLS
+CONNECT attempt and exchanges one cryptographically random 32-byte challenge,
+requiring an exact 32-byte response under the case deadline. It then stops and
+reaps the Gateway and proves the durable `terminal_bound` revision-five state
+is unchanged.
+
+Unit tests cover exact public result shape, private authority binding and
+redaction, Provider connect Admission correlation, deadline-bounded I/O,
+failure cleanup, unchanged state and no scenario advancement on failure.
+Candidate-owned process tests build all three sibling commands and traverse the
+actual adapter, external Caller, mTLS Gateway, private byte bridge and synthetic
+Provider WebSocket echo, observing exactly one terminal connect.
+
+These observations remain candidate-owned local evidence. In particular, the
+locked continuity challenge and digest must ultimately be generated and held
+by the independent `gateway_observer`; this result does not establish
+independent provenance, live runtime interoperability, same-shell
+reconstruction continuity, or qualification.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-10,
+`initial.gateway-wrong-caller-and-cross-tenant-rejection`, proving both
+caller-owned negative authorization paths without changing terminal state.
+**Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-10 Gateway wrong-caller and cross-tenant rejection
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 10/15**.
+
+Private scenario control is now v10 and keeps one supervised Caller alive for
+the first ten locked initial cases under a 1200-second aggregate bound. The
+adapter emits the rejection-case `scenario_started` record before its private
+command, forwards the validated two-interaction result, and reports the
+remaining 5 cases `not_executed` only after the tenth result.
+
+The tenth case requires the two caller-owned tenants and two Gateway controller
+subjects to be distinct. It restarts the exact endpoint/identity Gateway,
+installs the same caller policy, binds the retained Provider terminal opener,
+and issues one controller-A/tenant-A grant. A certificate-free CONNECT is
+rejected during TLS or before HTTP upgrade. A separate controller-B mTLS
+CONNECT with that same tenant-A grant is rejected at the subject binding. Each
+probe has exactly one wire attempt; neither consumes terminal bytes or opens a
+second Provider WebSocket. The Gateway is stopped and reaped and the complete
+`terminal_bound` revision-five state remains unchanged.
+
+Unit tests cover exact result and observation shape, certificate removal,
+distinct actor/subject selection, one-attempt failures, private handoff
+redaction, zero additional Provider connects, cleanup and unchanged state.
+Candidate-owned executable tests build all three sibling commands and observe
+both live rejection paths while the synthetic Provider terminal-connect count
+remains the one successful connection from the preceding round-trip case.
+
+These remain local candidate observations. The independent `gateway_observer`
+must still establish the locked no-runtime-connection and no-byte-forwarding
+facts during qualification; this slice does not establish independent
+provenance, live runtime interoperability or a qualification result.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-11, `initial.gateway-grant-expiry`, proving an active
+Gateway tunnel closes at its caller-owned grant deadline without changing
+terminal state. **Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-11 Gateway grant expiry
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 11/15**.
+
+Private scenario control is now v11 and keeps one supervised Caller alive for
+the first eleven locked initial cases under a 1320-second aggregate bound. The
+adapter emits the expiry-case `scenario_started` record before its private
+command, forwards the validated one-interaction result, and reports the
+remaining 4 cases `not_executed` only after the eleventh result.
+
+The eleventh case restarts the exact endpoint/identity Gateway, installs the
+same caller-owned tenant policy, and binds the retained Provider terminal
+opener. It issues one deliberately short-lived controller-A/tenant-A grant,
+clipped to the retained handoff and case cleanup bounds, and performs exactly
+one mTLS CONNECT. A fresh random 32-byte challenge must round trip before the
+grant deadline. The same connection must then close with a non-timeout error at
+or after that deadline; a post-expiry probe must receive no bytes. The Gateway
+is stopped and reaped and the complete `terminal_bound` revision-five state
+remains byte-for-byte unchanged.
+
+Unit tests cover the exact result/observation shape, initial byte authorization,
+deadline closure, no post-expiry response, private token/handoff redaction,
+cleanup, unchanged state, and no advancement on an invalid closure. The
+candidate-owned executable tests build all three sibling commands and observe
+the live expiry path; the synthetic Provider receives exactly one new terminal
+connection for this case.
+
+These remain local candidate observations. TCP can accept a locally buffered
+write after peer closure, so the implementation does not misclassify the first
+post-close write result as forwarding evidence. The independent
+`gateway_observer` must still establish initial authorization, close timing,
+and absence of post-expiry backend bytes during qualification. This slice does
+not establish independent provenance, live runtime interoperability, or a
+qualification result.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-12, `initial.gateway-revocation`, proving an active
+Gateway tunnel closes only after caller-authorized revocation is acknowledged,
+without changing terminal state. **Six large checkpoints remain in the fixed
+plan.**
+
+## e1.7a-12 Gateway revocation
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 12/15**.
+
+Private scenario control is now v12 and keeps one supervised Caller alive for
+the first twelve locked initial cases under a 1440-second aggregate bound. The
+adapter emits the revocation-case `scenario_started` record before its private
+command, forwards the validated two-interaction result, and reports the
+remaining 3 cases `not_executed` only after the twelfth result.
+
+The twelfth case restarts the exact endpoint/identity Gateway, installs the
+same caller-owned tenant policy, binds the retained Provider terminal opener,
+and issues one controller-A/tenant-A grant bounded by the live handoff and case
+cleanup deadline. Its only CONNECT completes a fresh random 32-byte round trip
+before the caller sends exactly one controller-A revocation control write.
+`revocation-acknowledged` is reported only after that control operation returns;
+the production Gateway returns only after all active permits finish. The same
+connection must then show a non-timeout close, and a post-revocation probe must
+receive no bytes. Gateway stop/reap succeeds and the complete
+`terminal_bound` revision-five state remains byte-for-byte unchanged.
+
+Unit tests cover exact interaction and observation shape, mutation-write
+accounting, initial byte authorization, acknowledgement ordering, connection
+closure, no post-revocation response, token/handoff redaction, cleanup, and
+failure without result or advancement. Candidate-owned executable tests build
+all three sibling commands and observe the live path; the synthetic Provider
+receives exactly one new terminal connection for this case.
+
+These are still local candidate observations. The wrong-controller revocation
+path remains covered at the Gateway component boundary but is not added to this
+locked two-interaction case. The independent `gateway_observer` must establish
+the close and no-forwarding facts during qualification. This slice does not
+establish independent provenance, live runtime interoperability, or a
+qualification result.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-13, `initial.artifact-staging-and-evidence`, adding
+the locked artifact mutation, operation reconciliation, evidence read, and
+durable artifact binding. **Six large checkpoints remain in the fixed plan.**
+
+## e1.7a-13 Artifact staging and evidence
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 13/15**.
+
+Private scenario control is now v13 and keeps one supervised Caller alive for
+the first thirteen locked initial cases under a 1560-second aggregate bound.
+The adapter emits the artifact-case `scenario_started` record before its private
+command, forwards the validated three-interaction result, and reports the
+remaining 2 cases `not_executed` only after the thirteenth result.
+
+The earlier output exec now creates one Caller-defined 24-byte file under the
+stable `/outputs` mount while retaining its required stdout. The thirteenth case
+constructs the artifact reference, source path, expected SHA-256, media type,
+exact size bound, expiry, operation/attempt/idempotency identities, and fence
+six (strictly above the terminal mutation fence) without accepting Provider
+metadata as platform truth. It submits the
+protected `stage_artifact` mutation, separately reconciles the correlated
+`artifact_stage` operation to `succeeded`, and reads evidence with a fresh
+descriptor Admission. The Caller requires `staged`, an opaque staging
+reference, exact digest/media/size, three passed checks, coherent timestamps,
+and unexpired evidence before committing `initial_complete` revision six.
+The durable binding uses the Caller-computed RFC 8785 digest of the full decoded
+evidence document; the Provider-supplied evidence digest is only one opaque
+field in that preimage.
+
+Provider client tests cover request-digest/admission/path/body binding, strict
+response shape, closed paths/media types, staged-check requirements, and
+operation/evidence correlation; the client also enforces the locked 64 KiB
+mutation limit. Scenario tests cover
+the exact public interaction shape, private-reference redaction, state
+transition, and rejection of mismatched digest, size, artifact reference,
+check result, or expiry. Candidate executable tests build all three sibling
+commands and traverse the mTLS/JWS Provider path. The Provider is synthetic and
+does not prove that an independent runtime produced or scanned the file.
+
+Final validation on 2026-09-15 passed the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks for changed process packages, the external
+authority verifier, the adjacent Provider Contract verifier, and tracked plus
+untracked whitespace checks. All changes remain uncommitted.
+
+Next bounded slice: e1.7a-14,
+`initial.provider-cross-tenant-artifact-rejection`, proving controller B cannot
+stage or read controller A's artifact operation and no artifact dispatch occurs.
+**Six large checkpoints and 22 fixed small steps remain.**
+
+## e1.7a-14 Provider cross-tenant artifact rejection
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 14/15**.
+
+Private scenario control is now v14 and keeps one supervised Caller alive for
+the first fourteen locked initial cases under a 1680-second aggregate bound.
+The adapter emits the cross-tenant case's `scenario_started` record before its
+private command, forwards the validated two-interaction result, and reports
+only the final initial case `not_executed` after the fourteenth result.
+
+The Caller opens a distinct controller-B Provider access from its retained
+credential bundle and signs a fresh Admission bound to tenant B and work order
+B. It reuses the exact successful artifact request body, operation, attempt,
+fence and request digest against tenant A's sandbox. The Provider requires the
+controller-B mTLS/JWS identity and complete HTTP/body binding, then returns the
+locked closed `403/SANDBOX_FORBIDDEN` before incrementing the artifact-dispatch
+count or replacing retained artifact authority. A separate fresh read
+Admission targets the retained artifact operation and receives the locked
+concealing `404/SANDBOX_NOT_FOUND`; the successful operation-read count does
+not advance and no operation document or backend reference is returned.
+
+Scenario tests cover exact public result shape, tenant-B Admission binding,
+reuse of the retained logical request, private-authority redaction, unchanged
+`initial_complete` revision-six state, non-retryable outcome enforcement, exact
+mutation-authority reuse on a permitted 503 retry, and fresh JTI issuance for a
+permitted read retry. Candidate process tests build the sibling commands and
+verify both mTLS/JWS rejection paths plus unchanged successful Provider counts.
+The Provider and observer are candidate-owned synthetic test components; this
+does not establish independent multi-tenant isolation, live runtime behavior,
+or qualification evidence.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next bounded slice: e1.7a-15,
+`initial.provider-mtls-caller-binding-rejection`, proving a valid Admission
+presented over controller B's mTLS identity cannot read controller A's sandbox.
+**Six large checkpoints and 21 fixed small steps remain.**
+
+## e1.7a-15 Provider mTLS caller-binding rejection
+
+Status: **complete as local candidate composition; checkpoint e1.7a is 15/15
+and complete locally**.
+
+Private scenario control is now v15 and keeps one supervised Caller alive for
+all 15 locked initial cases under an 1800-second aggregate bound. The adapter
+emits the final case's `scenario_started` before its private command, forwards
+the validated result, then completes the initial invocation as `completed`.
+
+For the final case the Caller deliberately uses controller B's Provider client
+and admitted mTLS certificate while constructing a fresh read Admission with
+controller A's signer, subject, tenant-A work order and retained policy digest.
+The candidate-owned synthetic Provider first authenticates controller B's
+certificate, then validates the otherwise-correct controller-A JWS and request
+binding, requires the peer/JWS caller identities to agree, and returns the
+locked non-retryable `403/SANDBOX_FORBIDDEN`. The normal sandbox-status read
+counter does not advance, proving the synthetic route rejected the mismatch
+before its state-read branch. No Provider document is returned and durable
+`initial_complete` revision-six state remains byte-for-byte unchanged.
+
+Scenario tests cover exact public result shape, controller-B transport with a
+controller-A-signed subject, fresh-JTI retry after an allowed 503, rejection of
+success, wrong-code and concealing-404 outcomes, unchanged state, the complete
+15-record private sequence, adapter ordering, and separately built process
+execution. This is candidate-owned local/synthetic evidence; it does not prove
+independent Provider runtime interoperability, observer independence,
+provenance, or qualification.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next bounded slice: e1.7b-1,
+`reconstruction.locked-capability-discovery`, starting reconstruction from the
+retained complete caller state without harness correlation reinjection.
+**Five large checkpoints and 20 fixed small steps remain.**
+
+## e1.7b-1 Reconstruction locked capability discovery
+
+Status: **complete as local candidate composition; checkpoint e1.7b is 1/5**.
+
+Private scenario control is now v16. It accepts either the complete 15-case
+initial sequence or the single currently authorized reconstruction capability
+request. The reconstruction request retains the same closed fields as initial
+startup and contains no sandbox, operation, attempt, idempotency, fencing,
+runtime-session or handoff binding. The Caller opens the state root only through
+`OpenReconstruction`, which accepts exactly one canonical `0600`
+`initial_complete` state document at revision six.
+
+The first reconstruction case starts fresh adapter, Caller and Gateway command
+processes. The Caller installs policy from its own retained tenant IDs, loads a
+new controller-A Provider access from the credential bundle, and discovers
+capabilities against a fresh candidate-owned synthetic Provider server
+instance. It accepts the result only when the locked capability selection,
+Provider revision and SHA-256 digest of the exact raw capability document equal
+the retained caller-owned binding. The complete state file is byte-identical
+before and after the new invocation. Gateway shutdown, private stdout EOF,
+empty stderr, clean Caller exit and reap are required before the adapter accepts
+the scenario result.
+
+The adapter emits `scenario_started` before private authorization, publishes
+the validated completed result, then truthfully reports the remaining four
+reconstruction cases `not_executed` and finishes `stopped`. Unit and process
+tests cover exact public result shape, 503 retry without invented Retry-After,
+capability-byte mismatch rejection and cleanup, forbidden-field absence,
+fresh Caller PID, fresh synthetic Provider instance, new Gateway process,
+byte-identical state and actual separately built adapter/Caller/Gateway
+commands.
+
+The Provider server and process assertions remain candidate-owned local test
+evidence. They do not establish an independently supervised new Provider
+process, external source/build provenance, live runtime continuity, independent
+observer facts, or qualification.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next bounded slice: e1.7b-2, `reconstruction.durable-lifecycle`, recovering the
+retained create operation and sandbox from caller-owned state and reconciling
+them without harness correlation reinjection.
+**Five large checkpoints and 19 fixed small steps remain.**
+
+## e1.7b-2 Reconstruction durable lifecycle
+
+Status: **complete as local candidate composition; checkpoint e1.7b is 2/5**.
+
+Private scenario control is now v17. After the completed reconstruction
+capability result, the adapter emits `scenario_started` for
+`reconstruction.durable-lifecycle` and authorizes that exact continuation on
+the same fresh Caller process. The Caller retains the controller-A access and
+the newly started reconstruction Gateway from the first case; neither the
+harness request nor the continuation command carries any sandbox, operation,
+attempt, fencing or tenant correlation.
+
+The second case reads the create operation and sandbox descriptors from the
+complete Caller-owned revision-six state. It signs a new Admission for every
+wire attempt, retries only explicit retryable `503` responses with a positive
+`Retry-After` under the case deadline and 64-attempt profile bound, and requires
+the exact retained create operation to be `succeeded`. It then requires the
+same retained sandbox, tenant, work order, workspace, Provider revision and
+slot key to report desired/observed `ready`, generation and observed generation
+one, the locked runtime profile, and a non-expired lease. No state transition is
+performed; the complete state document remains byte-for-byte identical.
+
+The adapter publishes both completed reconstruction results, truthfully marks
+the remaining three reconstruction cases `not_executed`, and finishes
+`stopped`. Only after the second result does private stdin close; successful
+Gateway stop, private stdout EOF, empty stderr, clean Caller exit and reap are
+required. Unit and separately built process tests cover exact public result
+shape, retained descriptor binding, fresh-JTI 503 retry, mismatched operation
+rejection, same Caller/Gateway lifetime, fresh synthetic Provider seeding,
+unchanged state bytes and Provider request counts of one capability, one
+operation and one sandbox read.
+
+This remains candidate-owned local/synthetic evidence. It does not establish
+an independently supervised new Provider process, live runtime continuity,
+external source/build provenance, independent observer facts or qualification.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next bounded slice: e1.7b-3,
+`reconstruction.retained-exec-usage-and-artifact-evidence`, reading and
+cross-checking the retained exec result, usage evidence and artifact evidence
+without state mutation or harness correlation reinjection.
+**Five large checkpoints and 18 fixed small steps remain.**
+
+## e1.7b-3 Reconstruction retained exec, usage and artifact evidence
+
+Status: **complete as local candidate composition; checkpoint e1.7b is 3/5**.
+
+Private scenario control is now v18. The adapter authorizes
+`reconstruction.retained-exec-usage-and-artifact-evidence` only after the first
+two reconstruction results, on the same fresh Caller and Gateway processes.
+The continuation carries only invocation, phase, case and deadline fields; it
+does not carry Provider operation, attempt, fencing, sandbox, evidence or digest
+values.
+
+The Caller constructs all three read descriptors from its complete revision-six
+state and signs a fresh Admission for every attempt. It accepts only explicit
+retryable `503` responses with a positive `Retry-After` under the case deadline
+and 64-attempt profile bound. The retained exec result must remain completed
+with zero exit, an opaque stdout reference, coherent timestamps and live
+retention. Usage must remain correlated, retained, complete or partial, and
+contain exactly one reconciled/runtime-metered exec-count entry of one. Artifact
+evidence must remain staged, correlated, unexpired, within its original
+retention, match the Caller-owned reference/content metadata, and retain all
+three passed checks.
+
+For each decoded document, the Caller independently recomputes its RFC 8785
+SHA-256 digest and requires equality with `exec.result_digest`,
+`exec.usage_evidence_digest` or `artifact.evidence_digest` in its durable state.
+The Provider's own opaque `evidence_digest` fields are not substituted for
+these Caller digests. A mismatch fails before publishing a scenario result and
+does not change the state.
+
+The local synthetic Provider now retains the exact documents read during the
+initial phase and imports those same bytes-as-values into a fresh service
+instance only after verifying all three Caller digests. This models Provider
+durability for the process tests and prevents regenerated timestamps from
+falsely satisfying continuity. It remains candidate-owned test setup, not an
+independent Provider persistence observation.
+
+The adapter publishes the first three reconstruction results, marks the final
+two `not_executed`, and finishes `stopped` only after Gateway shutdown, private
+EOF, empty stderr, clean Caller exit and reap. Tests cover exact public result
+shape, fresh-JTI 503 retry, digest mismatch rejection, stable state bytes,
+three-process execution and one reconstructed read of each evidence document.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next bounded slice: e1.7b-4, `reconstruction.durable-opaque-handoff`, reading
+and validating the retained terminal handoff without state mutation or harness
+correlation reinjection.
+**Five large checkpoints and 17 fixed small steps remain.**
+
+## e1.7b-4/5 Reconstruction retained handoff and Gateway reconnect
+
+Status: **complete as local candidate composition; checkpoint e1.7b is 5/5
+and complete locally**.
+
+Private scenario control is now v20. The fourth reconstruction command is
+accepted only after capability, lifecycle and retained-evidence completion in
+the same fresh Caller/Gateway lifetime. The Caller constructs the handoff read
+descriptor exclusively from its revision-six durable state, signs a fresh
+Admission for every attempt, and accepts retries only for an explicit retryable
+`503` with positive `Retry-After` under the case deadline. The returned full
+handoff must bind the retained operation, attempt, fence, sandbox, runtime
+session, terminal profile, WebSocket protocol, positive connection generation,
+live expiry, exact opaque reference and Caller-retained raw-reference digest.
+The raw reference is absent from public evidence.
+
+The fifth command uses that newly read full handoff as transient connection
+authority; it does not reconstruct authority from the opaque reference alone
+and receives no handoff injection from the harness. The Caller installs one
+backend opener into the already-running reconstructed Gateway, issues a
+caller-owned one-use grant clipped to both the command and handoff expiry, and
+completes one bounded 32-byte round trip through Gateway to the fresh synthetic
+Provider process. The grant, handoff and challenge bytes are absent from public
+output. The Caller state file remains byte-for-byte unchanged across all five
+reconstruction cases.
+
+The synthetic Provider retains the exact initial handoff and imports it into
+the fresh test service only after checking every durable state binding. Unit
+tests cover fresh-JTI read retry, mismatch rejection without authority or state
+advance, exact public result shapes, private-value redaction and bounded
+cleanup. Separately built process tests cover the fresh adapter, Caller,
+Gateway and synthetic Provider chain, one retained-handoff read, one terminal
+connect, clean process reap and unchanged state bytes.
+
+This is candidate-owned local/synthetic composition. The echoed bytes do not
+independently prove same-shell continuity; the locked qualification still
+requires the independent `gateway_observer` challenge and independently
+supervised process/runtime evidence.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+## e1.7c candidate process closure and transcript limits
+
+Completed on 2026-09-16. Adapter failures now preserve the locked public error
+surface: executable/start failures become `caller_start_failed`, ordinary case
+failures become `scenario_execution_failed`, and unconfirmed cleanup becomes a
+sanitized `internal_failure` plus nonzero adapter exit. A failure to close the
+Caller can no longer be discarded or mislabeled as successful cleanup.
+
+Caller process supervision now drains stdout concurrently with `Wait`, permits
+two seconds for a normal exit and enforces a five-second total reap bound for
+both normal completion and abort. It terminates the private process group after
+the leader exits, closing the inherited-pipe hole in which a descendant could
+otherwise keep stdout open indefinitely. Tests build a parent/straggler fixture
+and prove bounded normal and forced cleanup plus disappearance of the complete
+process group.
+
+Adapter tests now validate the exact 15-case initial and five-case
+reconstruction transcript sequences, monotonic sequence/phase binding, single
+last terminal, final LF, locked per-record and aggregate byte limits, and no
+post-terminal records. Executable tests additionally reject any public output
+containing retained caller run, tenant, work-order, workspace, branch,
+resolution, sandbox, operation, attempt, idempotency, runtime-session or raw
+handoff values.
+
+This is candidate-owned process evidence only. The `0600` caller state remains
+intentionally durable for reconstruction. The candidate does not perform or
+claim Provider/runtime namespace teardown, the pre-run baseline, the three
+stable zero-resource samples, the supervisor-owned closed transcript
+projection, or an independent qualification disposition. Those remain under
+the locked operator/observer boundary in e1.8b/e1.8c.
+
+Validation on 2026-09-16 covers the full race/shuffle suite, `go vet`,
+Linux/Windows compile checks, the external authority verifier, the adjacent
+Provider Contract verifier, and tracked plus untracked whitespace checks. All
+changes remain uncommitted.
+
+Next checkpoint: e1.8a, reproducible artifacts, immutable release/source
+identity, exact build commands/digests and provenance. **Three large
+checkpoints and eight merged execution steps remain.**
+
+## e1.8a local reproducible bundle and provenance boundary
+
+Local implementation completed on 2026-09-16. `cmd/release-artifacts` creates
+one deterministic Git-visible source archive, derives the immutable 64-hex
+`source-revision` from its raw SHA-256, and embeds that identity into all three
+candidate command builds. It records and fixes the exact Go version and raw Go
+binary digest, target/architecture baseline, environment, `-mod=readonly`,
+`-trimpath`, `-buildvcs=false`, empty build ID and linker identity arguments.
+
+The builder extracts the same archive into two independent temporary roots and
+requires byte-identical qualification-adapter, external-caller and
+caller-gateway outputs before atomically publishing the bundle. Its canonical
+RFC 8785 manifest binds the authority lock, source archive and Git baseline,
+toolchain, exact command arrays, executable raw-byte digests/sizes and shared
+source identity. `-verify` strictly rechecks the canonical/self-digesting
+manifest, deterministic archive shape and every retained executable. Tests also
+launch the built adapter and require its two startup identities to equal the
+archive-derived identity, then prove executable tampering is rejected.
+
+The provenance boundary is deliberately not closed. The manifest says
+`candidate-local-reproducibility-only`, `qualification_eligible: false`, and
+records no independent source-hosting/build attestation or process-supervisor
+observation. A private `shell-echo/sandbox-runtime-external-caller` repository
+and commit-pinned hosted workflow are now defined, but the exact candidate
+revision has not yet been pushed or built there. Candidate code cannot
+independently attest its own owner or build. Closing the final third of e1.8a
+therefore still requires the successful hosted build and attestation evidence.
+
+Next required step: obtain independent source hosting and build provenance for
+the exact content-addressed source snapshot and match the three observed raw
+artifact digests. **Three large checkpoints and six merged execution steps
+remain; e1.8a is 2/3 complete.**

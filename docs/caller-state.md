@@ -71,10 +71,59 @@ rediscovers the exact capability bytes and reads the retained lifecycle without
 changing state. A failure leaves the last committed stage (`planned` or
 `capabilities_bound`) in place, emits no caller completion, and makes the same
 root ineligible for another initial invocation or reconstruction. The
-coordinator never deletes or rolls back durable state. e1.6c must advance the
-same store through exec and terminal transitions; e1.7a must perform the actual
-artifact work and final transition before an initial run can produce the
-complete state accepted by a later reconstruction invocation.
+coordinator never deletes or rolls back durable state. e1.6c advances the same
+store through exec and terminal transitions and retains transient terminal
+authority only for the current initial phase. e1.7a must perform the actual
+locked initial-case artifact work and final transition before an initial run
+can produce the complete state accepted by a later reconstruction invocation.
+
+The first twelve e1.7a operational slices intentionally use a fresh initial
+store and one long-lived Caller. Capability discovery commits
+`capabilities_bound` at revision two. Protected create then submits the exact
+planned operation but does not advance durable state: lifecycle polling and
+`BindLifecycle` belong to the fourth locked case. The Caller instead retains the
+complete create request, Admission JWS and accepted operation in process memory
+for the immediately following replay and lifecycle-completion cases. Exact-JTI
+rejection and fresh-JTI idempotency replay consume that in-memory authority
+without changing the store. Lifecycle completion then reads the retained
+operation and sandbox with fresh Admissions, requires a succeeded create and a
+generation-one ready sandbox, and commits `lifecycle_bound` revision three.
+The fifth case submits and reconciles the planned exec, validates its retained
+zero-exit result and separate usage document, and commits their caller-computed
+canonical digests at `exec_bound` revision four. This partial state is still not
+eligible for a new initial or reconstruction invocation. The sixth case uses
+an exec fence below the retained accepted fence and requires Provider rejection
+before dispatch; it deliberately makes no durable transition and proves the
+entire `exec_bound` state remains unchanged.
+The seventh case starts and cancels a separate higher-fence exec, reconciles
+both the cancellation operation and target operation, and reads the correlated
+cancelled result. Those transient correlations are not durable reconstruction
+state. The eighth case opens the planned terminal session at fence five,
+reconciles its operation, validates the WebSocket protocol, opaque handoff,
+positive connection generation and bounded live expiry, then commits
+`terminal_bound` revision five. The complete handoff is retained only in the
+live Caller for the following Gateway case; public scenario output contains no
+raw handoff reference. This partial state is still ineligible for reconstruction.
+The ninth case consumes that live authority without a durable transition: it
+starts a sibling Gateway, installs caller-owned tenant policy, binds a fresh
+Admission-protected Provider WebSocket opener, issues one bounded controller-A
+grant and exchanges an exact 32-byte random challenge. Gateway shutdown removes
+the transient grant; the retained state remains byte-for-byte
+`terminal_bound` revision five.
+The tenth case restarts the Gateway with the same endpoint and identity, uses a
+tenant-A grant for one certificate-free and one controller-B CONNECT probe,
+and requires both to fail before the terminal backend opens. It makes no
+durable transition and again leaves `terminal_bound` revision five unchanged.
+The eleventh case restarts the same Gateway, uses the retained live handoff to
+open one controller-A connection under a short caller-owned grant, proves
+initial byte authorization, and then observes a non-timeout close at the grant
+deadline with no response bytes after expiry. It also makes no durable
+transition and leaves `terminal_bound` revision five unchanged.
+The twelfth case opens one controller-A connection under a bounded live grant,
+proves initial byte authorization, and submits one caller-owned revocation.
+The control acknowledgement is accepted only after the active connection has
+closed; a post-revocation probe receives no bytes. The durable state remains
+`terminal_bound` revision five.
 
 ## Evidence limits
 

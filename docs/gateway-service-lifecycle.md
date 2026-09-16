@@ -86,9 +86,10 @@ tunnel. The resulting control-pipe EOF must close the tunnel, listener and
 Gateway process. Neither helper is linked into the production commands.
 
 e1.6a integrates this runner with caller phase state and immutable tenant
-policy; e1.6b adds Provider capability/create reconciliation around the same
-service lifecycle. This establishes no real Provider backend, runtime
-interoperability, external source/build provenance, independent process
-observation, 15+5 scenario result or qualification disposition. The production
-Gateway resolver remains unavailable; the real Provider terminal backend is
-checkpoint 7.
+policy; e1.6b adds Provider capability/create reconciliation. e1.6c upgrades
+the operational runner to private service v2 with a one-connection backend
+socket. Provider credentials remain in the Caller; cancellation, revocation,
+expiry, terminal EOF and stop close the bridged stream and process resources.
+Candidate-owned loopback mTLS/WebSocket tests do not establish independent
+runtime interoperability, external source/build provenance, independent
+process observation, a 15+5 scenario result or qualification disposition.

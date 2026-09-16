@@ -6,8 +6,18 @@ use generated code from the locked public Contract, but it must not import or
 copy Provider implementation packages or either repository's reference E2E
 caller.
 
-The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 6 of 13
-checkpoints are complete; 7 remain. The next checkpoint is e1.6c.
+The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 9 of 13
+checkpoints are complete; 4 remain. Checkpoint e1.7b is complete as local
+candidate composition with all 5 reconstruction cases locally composed.
+
+The current authority lock pins Provider Contract revision
+`22ba6987ea5fbc37d53942720133c0acad199edd`, tree
+`c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38`, the 53-case local Suite, and the
+refreshed P2.7 profile/report/protocol authorities. The raw
+`authority.lock.json` digest is
+`sha256:5916b07719cc9320a021bbc96669f4a0c0a1d50a8301e9ab69f9fa248cdc03cf`.
+This refresh is currently uncommitted candidate state, not release provenance
+or a qualification result.
 
 ## Current scope
 
@@ -173,16 +183,163 @@ operation and sandbox without mutating the complete state. Private caller
 control is v4 so its completion reports lifecycle/Gateway coordination while
 explicitly disclaiming scenario results.
 
-There is still no Provider exec, terminal or handoff scenario execution, release
-artifact, source hosting attestation, build-system attestation, 15+5 execution,
-or qualification result. The local three-process tests are not independent
-process-supervisor observations. The Gateway component tests use local certificates, loopback
-sockets, and a synthetic terminal backend; they do not prove Provider-runtime
-interoperability or independent observations. Local filesystem checks do not
+The e1.6c coordinator sub-slice advances the operational initial path to
+`terminal_bound`. After lifecycle readiness, the caller submits one bounded
+exec, reconciles its operation, reads its retained result and separate usage
+evidence, and binds digests of those actual decoded documents. It then opens a
+terminal session, reconciles the operation and reads the exact opaque handoff.
+Session/profile/operation identities and expiry must match the caller's request
+before binding. Exec and terminal dependencies are required; a lifecycle-only
+client cannot silently complete this path.
+
+Reads use the correct Contract descriptor, route and fresh Admission binding.
+Only explicit retryable 503 reads with a usable Retry-After are retried within
+the phase deadline. Failures preserve the last durable stage; mutations are
+not automatically repeated. Local mTLS and separately built process tests use
+the candidate-owned synthetic Provider. Gateway grant/expiry/revocation and
+Provider-terminal byte forwarding are composed through the initial phase.
+The Caller retains Provider credentials and Admission signing authority; a
+one-connection private socket carries only the connected byte stream to the
+Gateway child. The protected WebSocket requires the exact terminal-connect
+capability, full retained descriptor digest, fresh Admission, mTLS, binary
+subprotocol, message bound and handoff deadline.
+
+The fifteen e1.7a slices execute
+`initial.locked-capability-discovery` and
+`initial.protected-lifecycle-create`, then `initial.replay-semantics` in one
+separately supervised Caller process, followed by
+`initial.lifecycle-completion-and-status`. The adapter emits each
+`scenario_started` before authorizing its private command. The replay case
+requires the original compact JWS/JTI to receive a closed non-retryable 409,
+then signs the byte-identical logical request with a fresh JTI and requires the
+same accepted operation without another runtime dispatch. The fourth case
+polls the retained create operation and sandbox with fresh read Admissions,
+requires `succeeded` plus generation-one `ready`, and only then commits
+`lifecycle_bound` revision three. The fifth case submits the bounded output
+exec, reconciles its operation, reads the retained zero-exit result and separate
+usage evidence, requires an opaque stdout reference and exactly one exec-count
+entry, and binds caller-computed digests of both full decoded documents at
+`exec_bound` revision four. The sixth case submits a distinct exec request with
+a fencing token below the accepted exec fence, requires a closed non-retryable
+409 before dispatch, and leaves the complete `exec_bound` state byte-for-byte
+unchanged. The seventh case starts a higher-fence cancellable exec, submits a
+separate cancellation intent, and does not treat either 202 as final: it
+requires the cancel operation to succeed, the target exec operation and
+retained result to become `cancelled`, and the durable state to remain
+unchanged. The eighth opens the planned terminal session at fence five,
+reconciles the operation, validates the live bounded WebSocket handoff and
+positive connection generation, and commits `terminal_bound` revision five.
+The ninth starts the actual sibling Gateway, installs caller-owned tenant
+policy, binds the retained Provider WebSocket backend, issues one controller-A
+grant bounded by the handoff and scenario deadlines, and proves an exact
+32-byte random challenge round-trip over mTLS CONNECT. It does not mutate the
+`terminal_bound` revision-five state. The tenth restarts the exact sibling Gateway, issues one
+controller-A/tenant-A grant, then proves both a missing-client-certificate
+CONNECT and controller B's attempted use of that grant are rejected before the
+Provider terminal backend opens. It also leaves `terminal_bound` revision five
+unchanged.
+
+The eleventh restarts the same sibling Gateway, issues a deliberately
+short-lived controller-A grant bounded by the retained Provider handoff, and
+uses one CONNECT attempt. It first completes a fresh random 32-byte echo while
+the grant is live, then requires a non-timeout connection close at the grant
+deadline and observes no response bytes after a post-expiry probe. The durable
+`terminal_bound` revision-five state is unchanged.
+
+The twelfth again opens one controller-A tunnel and proves a fresh random
+32-byte round trip before sending one caller-owned revocation control write.
+The acknowledgement is accepted only after the Gateway has closed the active
+connection; a post-revocation probe receives no bytes. It leaves
+`terminal_bound` revision five unchanged.
+
+The thirteenth stages the exact 24-byte file created by the earlier output exec.
+The Caller owns its artifact reference, source path, media type, expected digest
+and exact size bound; it accepts neither the `202` nor the later operation read
+as final evidence. Only a correlated `artifact_stage` success followed by a
+non-expired `staged` evidence document with all three checks passed and exact
+content metadata advances durable state to `initial_complete` revision six.
+The retained evidence binding is the Caller-computed RFC 8785 digest of the full
+decoded evidence document; the Provider's own `evidence_digest` remains an
+opaque field in that preimage.
+
+The fourteenth case reuses that exact logical artifact request under a fresh
+controller-B Admission bound to tenant B. The Provider must reject the tenant-A
+sandbox mutation with closed `403/SANDBOX_FORBIDDEN` before artifact dispatch,
+then conceal the retained artifact operation behind
+`404/SANDBOX_NOT_FOUND`. Neither rejection changes the durable
+`initial_complete` revision-six state or exposes backend references.
+
+The fifteenth case deliberately sends a fresh controller-A-signed Admission
+over controller B's admitted mTLS connection. The Provider requires the two
+caller identities to agree and returns the locked closed
+`403/SANDBOX_FORBIDDEN` before a sandbox state read. The adapter now reports all
+15 initial cases `completed` and finishes the local initial invocation
+`completed`; durable state remains `initial_complete` revision six.
+
+The first reconstruction case starts fresh adapter, Caller and Gateway command
+processes, opens only the retained complete caller-state file, and rediscovers
+capabilities through controller A against a fresh synthetic Provider instance.
+It requires the raw capability snapshot digest and Provider revision to match
+the caller-owned state exactly, leaves that state byte-identical, and carries no
+sandbox, operation, attempt, idempotency, fencing, session or handoff binding in
+private control. The second case keeps that same new Caller and Gateway alive,
+loads the retained create-operation and sandbox correlations only from the
+Caller store, and uses fresh controller-A Admissions to require a succeeded
+create operation plus the same generation-one ready sandbox. The retained state
+remains byte-identical. The third case reads the retained exec result, usage
+evidence and artifact evidence with fresh Admissions, revalidates their stable
+semantics and expiration bounds, and requires Caller-computed digests of all
+three full decoded documents to match revision six exactly. The local synthetic
+Provider carries those same retained documents into its fresh service instance
+instead of regenerating timestamps. The fourth case reads the exact retained
+terminal handoff under a fresh Admission, binds it to the Caller-owned session
+and raw-reference digest, and keeps the opaque reference out of public output.
+The fifth case grants that authority through the same reconstructed Gateway and
+performs one bounded 32-byte connection round trip. All five local
+reconstruction results are now `completed`, and the retained state file remains
+byte-identical. This local echo composes the connection path; only the later
+independent `gateway_observer` challenge can prove same-shell continuity for
+qualification.
+
+These local Gateway results are candidate-owned composition evidence, not the
+independent `gateway_observer` evidence required by qualification. There is no
+release artifact, source hosting attestation,
+build-system attestation, independently supervised 15+5 qualification
+execution, or qualification result. The local three-process tests are not
+independent process-supervisor observations. The Gateway component tests use
+local certificates, loopback sockets, and a synthetic terminal backend; they
+do not prove Provider-runtime interoperability or independent observations.
+Local filesystem checks do not
 prove that the harness preserved and never inspected the state root. The pipe
 file type alone does not prove supervisor-created anonymity or
 startup-before-delivery. A local repository created by the qualification
 operator is not by itself third-party provenance.
+
+The completed e1.7c process-closure checkpoint bounds both normal and failure
+cleanup of the candidate-owned Caller process group to five seconds, including
+descendants that retain stdout after the group leader exits. Cleanup uncertainty
+is reported only as sanitized `internal_failure` with a nonzero adapter exit;
+caller-start and scenario failures use their locked public codes. Local tests
+also enforce the exact initial/reconstruction output order, one final terminal,
+final LF, record/aggregate size limits and absence of caller-private
+correlations. The retained caller-state file is intentional. Provider/runtime
+namespace teardown and the three stable zero-resource samples remain
+operator-owned qualification evidence and are not claimed here.
+
+The local portion of e1.8a adds a content-addressed candidate release bundle.
+It archives the exact Git-visible source with deterministic metadata, embeds
+the archive SHA-256 as the immutable Caller/Adapter/Gateway `source-revision`,
+rebuilds the three executable artifacts from two separate archive extractions,
+and requires byte-identical outputs. A canonical self-digesting manifest binds
+the authority lock, source archive, exact Go toolchain and build commands, and
+all raw executable digests; a strict verifier detects retained-byte changes.
+See [`docs/release-artifacts.md`](docs/release-artifacts.md).
+
+That manifest is intentionally marked qualification-ineligible. A private
+source repository and commit-pinned hosted workflow are now defined, but only a
+pushed exact revision plus a successful independent build/attestation can close
+the final e1.8a provenance gate. Qualification supervisor observation remains a
+later external gate and cannot be self-certified by this candidate.
 
 ## Verify the locked inputs
 
@@ -196,8 +353,10 @@ mise exec -- go run ./cmd/verify-authority \
 ```
 
 The last command reads only the public files named in `authority.lock.json`.
-The command-level tests launch the local all-not-executed three-process
-bootstrap, a test-only local mTLS Provider surface, and the actual Gateway
+Against the adjacent Provider source, it currently passes with mise Go 1.26.5
+and explicitly claims no external artifact or qualification result.
+The command-level tests launch the local adapter/Caller capability case against
+a test-only local mTLS Provider surface, as well as the historical actual Gateway
 serving entry point. Provider/Gateway component and test-child byte tests use
 loopback TLS and synthetic behavior. None establishes live runtime Provider
 interoperability or an

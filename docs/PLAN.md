@@ -14,18 +14,77 @@ be explained explicitly instead of silently resetting the count.
 | 4 | e1.5e.4 | Gateway identity/endpoint continuity, restart, parent death, deadline and live connection cleanup | Complete (local process supervision) |
 | 5 | e1.6a | Caller phase coordinator: empty initial state and complete-only reconstruction | Complete (local composition) |
 | 6 | e1.6b | Provider credential, capability, lifecycle, reconciliation and durable binding composition | Complete (local composition) |
-| 7 | e1.6c | Exec, terminal, handoff, caller grant/revocation and actual backend composition | Next |
-| 8 | e1.7a | All 15 locked initial cases with truthful interactions, assertions and observation references | Pending |
-| 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Pending |
-| 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Pending |
-| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | Pending |
+| 7 | e1.6c | Exec, terminal, handoff, caller grant/revocation and actual backend composition | Complete (local synthetic/process composition) |
+| 8 | e1.7a | All 15 locked initial cases with truthful interactions, assertions and observation references | Complete (local synthetic/process composition) |
+| 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Complete (local synthetic/process composition) |
+| 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Complete (candidate process closure; operator cleanup still external) |
+| 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | In progress (2/3: local bundle complete; independent provenance pending) |
 | 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending |
 | 13 | e1.8c | Closed report, receipt, independent validation and final qualification disposition | Pending |
 
-After checkpoint 6, **7 checkpoints remain** across three stages:
-caller composition (7), scenarios (8-10), and artifacts
-and qualification (11-13). Each of the 15+5 cases is a test obligation within
-its checkpoint, not an additional checkpoint in this count.
+After the local portion of checkpoint 11, **3 checkpoints remain** across two
+stages: the independent provenance gate in 11, and independent qualification
+(12-13). They comprise six merged execution steps: one for independently
+hosted/built provenance, three for the independently supervised run, and two
+for report/receipt/conclusion. Each of the 15+5 cases is a
+test obligation within its checkpoint, not an additional checkpoint in this
+count.
+
+Checkpoint 7 includes the exec/result/usage/session/handoff coordinator,
+caller Gateway grant/expiry/revocation, protected Provider WebSocket connector,
+and a one-connection Caller-to-Gateway byte bridge. Its acceptance uses a
+candidate-owned synthetic Provider and does not establish independent runtime
+interoperability.
+
+Checkpoint 8 executes capability discovery, protected lifecycle
+create, both replay-semantics checks, lifecycle completion/status, exec
+result/usage evidence, stale-fencing rejection, exec cancellation, terminal
+session/opaque handoff, the authorized Gateway terminal byte round-trip, and
+missing-caller/cross-tenant Gateway rejection, live grant expiry, active
+revocation, artifact staging/evidence binding, and Provider cross-tenant
+artifact mutation/operation concealment, and mTLS/JWS caller-identity mismatch
+rejection in one Caller process. This completes all 15 initial cases as local
+candidate composition and advances the fixed count to 8/13. It does not prove
+independent runtime interoperability, observations, provenance, or qualification.
+
+Checkpoint 9 executes reconstruction capability discovery, durable
+lifecycle reconciliation, and retained exec/usage/artifact evidence reads from
+the complete retained caller state in fresh adapter, Caller and Gateway command
+processes. It requires exact raw capability continuity, reads the retained
+create operation and generation-one ready sandbox, then recomputes and matches
+the three full retained-document digests under fresh Admissions while leaving
+the state file byte-identical; no forbidden Provider correlation is present in
+private control. It then reads the retained terminal handoff with a fresh
+Admission, validates the exact runtime-session and opaque-reference digest, and
+uses the same reconstructed Gateway for one bounded authorized byte round trip.
+All five results are locally completed while the state file remains
+byte-identical. The candidate-owned synthetic Provider and Gateway establish
+local composition only; they do not supply the independent observer evidence
+required to prove same-shell continuity or qualification.
+
+Checkpoint 10 closes the candidate-owned process boundary. Adapter failures
+map caller start, scenario and cleanup uncertainty onto the locked public code
+set without private diagnostics. Caller stdout and process waiting proceed
+concurrently; both graceful completion and abort are bounded to five seconds
+and kill/reap the caller's private process group, including descendants that
+outlive the group leader. Exact initial and reconstruction record counts,
+sequence, phase, terminal position, final LF and aggregate/per-record limits
+are locally tested, as is absence of caller-private correlations from public
+output. The durable `0600` caller state is intentionally retained for
+reconstruction. Provider/runtime namespace teardown, the pre-run baseline and
+three stable zero-resource samples remain exclusively operator-owned evidence
+for checkpoints 12-13; this checkpoint does not claim them.
+
+Checkpoint 11 now has a deterministic source archive, source-archive-derived
+immutable startup identity, exact toolchain/command/environment recording,
+two independent archive extractions and byte-identical rebuild enforcement,
+three raw executable digests, a canonical self-digesting manifest and strict
+retained-byte verifier. The manifest is deliberately qualification-ineligible
+and states that independent source hosting, build attestation and process
+supervisor observation are absent. Because the current worktree is uncommitted
+and has no configured remote, the final provenance third of this checkpoint
+requires separate commit/publication/hosted-build authorization and cannot be
+self-certified by candidate code.
 
 Checkpoint 1 corrects an earlier premise: the public adapter protocol allows
 up to eight channels; the former seven were candidate-specific. The eighth

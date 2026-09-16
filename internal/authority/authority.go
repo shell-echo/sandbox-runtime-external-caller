@@ -15,7 +15,7 @@ import (
 
 const (
 	LockPath                    = "authority.lock.json"
-	ExpectedAuthorityLockDigest = "sha256:9ef1392b3ec6457e0e0704a3f4f5b0567167cbf23cbb413be68dc295c601e023"
+	ExpectedAuthorityLockDigest = "sha256:5916b07719cc9320a021bbc96669f4a0c0a1d50a8301e9ab69f9fa248cdc03cf"
 	maxLockBytes                = 64 << 10
 	maxAuthorityFileBytes       = 1 << 20
 )

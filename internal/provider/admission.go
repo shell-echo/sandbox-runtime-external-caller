@@ -14,17 +14,25 @@ import (
 )
 
 const (
-	CreateRequestContractID       = "urn:shell-echo:sandbox-runtime:request:create:v1"
-	StatusDescriptorContractID    = "urn:shell-echo:sandbox-runtime:descriptor:status:v1"
-	OperationDescriptorContractID = "urn:shell-echo:sandbox-runtime:descriptor:operation:v1"
-	MutationDigestProfile         = "rfc8785-request-excluding-request-digest-v1"
-	DescriptorDigestProfile       = "rfc8785-full-document-v1"
-	AdmissionContextContractID    = "urn:shell-echo:sandbox-runtime:admission-context:v1"
-	AdmissionContextDigestProfile = "rfc8785-full-document-excluding-context-digest-v1"
-	AdmissionHeaderName           = "X-Sandbox-Runtime-Admission-Context"
-	JWSHeaderType                 = "agent-sandbox-operation-admission+jwt"
-	maxAdmissionContextBytes      = 16384
-	maxBearerBytes                = 8192
+	CreateRequestContractID              = "urn:shell-echo:sandbox-runtime:request:create:v1"
+	ExecRequestContractID                = "urn:shell-echo:sandbox-runtime:request:exec:v1"
+	CancelExecRequestContractID          = "urn:shell-echo:sandbox-runtime:request:cancel-exec:v1"
+	RuntimeSessionRequestContractID      = "urn:shell-echo:sandbox-runtime:request:open-runtime-session:v1"
+	ArtifactStagingRequestContractID     = "urn:shell-echo:sandbox-runtime:request:stage-artifact:v1"
+	StatusDescriptorContractID           = "urn:shell-echo:sandbox-runtime:descriptor:status:v1"
+	OperationDescriptorContractID        = "urn:shell-echo:sandbox-runtime:descriptor:operation:v1"
+	ExecResultDescriptorContractID       = "urn:shell-echo:sandbox-runtime:descriptor:exec-result:v1"
+	UsageDescriptorContractID            = "urn:shell-echo:sandbox-runtime:descriptor:usage-evidence:v1"
+	SessionDescriptorContractID          = "urn:shell-echo:sandbox-runtime:descriptor:runtime-session:v1"
+	ArtifactEvidenceDescriptorContractID = "urn:shell-echo:sandbox-runtime:descriptor:artifact-staging-evidence:v1"
+	MutationDigestProfile                = "rfc8785-request-excluding-request-digest-v1"
+	DescriptorDigestProfile              = "rfc8785-full-document-v1"
+	AdmissionContextContractID           = "urn:shell-echo:sandbox-runtime:admission-context:v1"
+	AdmissionContextDigestProfile        = "rfc8785-full-document-excluding-context-digest-v1"
+	AdmissionHeaderName                  = "X-Sandbox-Runtime-Admission-Context"
+	JWSHeaderType                        = "agent-sandbox-operation-admission+jwt"
+	maxAdmissionContextBytes             = 16384
+	maxBearerBytes                       = 8192
 )
 
 var (
@@ -36,6 +44,42 @@ type AdmissionTarget struct {
 	Method          string           `json:"method"`
 	Path            string           `json:"path"`
 	NormalizedQuery []QueryParameter `json:"normalized_query"`
+}
+
+func BindExecRequest(request ExecRequest) (ExecRequest, error) {
+	digest, err := jcs.DigestExcluding(request, "request_digest")
+	if err != nil || request.RequestDigest != "" && request.RequestDigest != digest {
+		return ExecRequest{}, ErrInvalidContractDocument
+	}
+	request.RequestDigest = digest
+	if err := ValidateExecRequest(request); err != nil {
+		return ExecRequest{}, err
+	}
+	return request, nil
+}
+
+func BindRuntimeSessionOpenRequest(request RuntimeSessionOpenRequest) (RuntimeSessionOpenRequest, error) {
+	digest, err := jcs.DigestExcluding(request, "request_digest")
+	if err != nil || request.RequestDigest != "" && request.RequestDigest != digest {
+		return RuntimeSessionOpenRequest{}, ErrInvalidContractDocument
+	}
+	request.RequestDigest = digest
+	if err := ValidateRuntimeSessionOpenRequest(request); err != nil {
+		return RuntimeSessionOpenRequest{}, err
+	}
+	return request, nil
+}
+
+func BindArtifactStagingRequest(request ArtifactStagingRequest) (ArtifactStagingRequest, error) {
+	digest, err := jcs.DigestExcluding(request, "request_digest")
+	if err != nil || request.RequestDigest != "" && request.RequestDigest != digest {
+		return ArtifactStagingRequest{}, ErrInvalidContractDocument
+	}
+	request.RequestDigest = digest
+	if err := ValidateArtifactStagingRequest(request); err != nil {
+		return ArtifactStagingRequest{}, err
+	}
+	return request, nil
 }
 
 type QueryParameter struct {
@@ -329,6 +373,9 @@ func operationBinding(operation string) (string, string, bool) {
 		"read_sandbox": "status", "read_operation": "operation", "read_result": "exec-result", "read_runtime_session": "runtime-session", "read_browser_session": "browser-session",
 		"read_artifact_staging_evidence": "artifact-staging-evidence", "read_usage_evidence": "usage-evidence", "read_snapshot_manifest": "snapshot-manifest", "read_events": "events",
 	}
+	if operation == "connect_runtime_session" {
+		return RuntimeSessionConnectDescriptorContractID, DescriptorDigestProfile, true
+	}
 	if name, ok := read[operation]; ok {
 		return "urn:shell-echo:sandbox-runtime:descriptor:" + name + ":v1", DescriptorDigestProfile, true
 	}
@@ -367,6 +414,8 @@ func targetMatchesOperation(operation, sandboxID, operationID string, target Adm
 		wantMethod, wantPath = "GET", "/v1/operations/"+operationID+"/artifact-staging-evidence"
 	case "read_usage_evidence":
 		wantMethod, wantPath = "GET", "/v1/operations/"+operationID+"/usage-evidence"
+	case "connect_runtime_session":
+		wantMethod, wantPath = "GET", "/v1/runtime-sessions:connect"
 	default:
 		return false
 	}

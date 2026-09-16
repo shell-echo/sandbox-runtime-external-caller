@@ -9,27 +9,33 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerstate"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerterminal"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/jcs"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/provider"
 )
 
 const (
-	RuntimeProfileID  = "sandbox-runtime-coding-shell-v1"
-	ExecProfileID     = "exec-v1"
-	TerminalProfileID = "terminal-v1"
-	ImageReference    = "registry.invalid/sandbox/base"
-	ImageDigest       = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-	EmptyBaseDigest   = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	SandboxSlotKey    = "primary-code"
+	RuntimeProfileID         = "sandbox-runtime-coding-shell-v1"
+	ExecProfileID            = "exec-v1"
+	TerminalProfileID        = "terminal-v1"
+	TerminalConnectProfileID = "terminal-connect-v1"
+	ImageReference           = "registry.invalid/sandbox/base"
+	ImageDigest              = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	EmptyBaseDigest          = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	SandboxSlotKey           = "primary-code"
 
-	createFencingToken = int64(1)
-	maxPollAttempts    = 64
-	pollInterval       = 25 * time.Millisecond
+	createFencingToken   = int64(1)
+	execFencingToken     = int64(2)
+	terminalFencingToken = int64(3)
+	artifactFencingToken = int64(6)
+	maxPollAttempts      = 64
+	pollInterval         = 25 * time.Millisecond
 )
 
 var (
@@ -41,10 +47,23 @@ var (
 )
 
 type providerClient interface {
+	execTerminalClient
 	DiscoverCapabilitiesDocument(context.Context) (provider.ProviderCapabilities, []byte, error)
 	CreateSandbox(context.Context, provider.CreateSandboxRequest, provider.Admission) (provider.ProviderOperation, error)
 	GetSandboxStatus(context.Context, provider.ReadDescriptor, provider.Admission) (provider.SandboxStatus, error)
 	GetOperation(context.Context, provider.ReadDescriptor, provider.Admission) (provider.ProviderOperation, error)
+}
+
+type execTerminalClient interface {
+	GetUsageEvidence(context.Context, provider.ReadDescriptor, provider.Admission) (provider.UsageEvidence, error)
+	CreateExec(context.Context, string, provider.ExecRequest, provider.Admission) (provider.ProviderOperation, error)
+	CancelExec(context.Context, string, provider.CancelExecRequest, provider.Admission) (provider.ProviderOperation, error)
+	GetExecResult(context.Context, provider.ReadDescriptor, provider.Admission) (provider.ExecResult, error)
+	OpenRuntimeSession(context.Context, string, provider.RuntimeSessionOpenRequest, provider.Admission) (provider.ProviderOperation, error)
+	GetRuntimeSessionHandoff(context.Context, provider.ReadDescriptor, provider.Admission) (provider.RuntimeSessionHandoff, error)
+	ConnectRuntimeSession(context.Context, provider.RuntimeSessionHandoff, provider.Admission) (io.ReadWriteCloser, error)
+	StageArtifact(context.Context, string, provider.ArtifactStagingRequest, provider.Admission) (provider.ProviderOperation, error)
+	GetArtifactStagingEvidence(context.Context, provider.ReadDescriptor, provider.Admission) (provider.ArtifactStagingEvidence, error)
 }
 
 type access struct {
@@ -58,98 +77,107 @@ type access struct {
 
 type accessFactory func(*credentials.Bundle, string, string) (*access, error)
 
-// Run performs only capability and create-lifecycle work. Initial advances a
-// planned store through lifecycle_bound. Reconstruction proves the exact
-// retained capability and lifecycle bindings without mutating the store.
-func Run(ctx context.Context, phase, origin string, bundle *credentials.Bundle, store *callerstate.Store) error {
+// Run advances initial state through protected lifecycle, exec/usage and terminal
+// handoff reads to terminal_bound and returns fresh transient terminal authority.
+// Reconstruction checks only retained capability and lifecycle bindings and
+// returns no terminal authority; later checkpoints extend reconstruction.
+func Run(ctx context.Context, phase, origin string, bundle *credentials.Bundle, store *callerstate.Store) (*callerterminal.Authority, error) {
 	return run(ctx, phase, origin, bundle, store, buildAccess, time.Now)
 }
 
-func run(ctx context.Context, phase, origin string, bundle *credentials.Bundle, store *callerstate.Store, factory accessFactory, now func() time.Time) error {
+func run(ctx context.Context, phase, origin string, bundle *credentials.Bundle, store *callerstate.Store, factory accessFactory, now func() time.Time) (*callerterminal.Authority, error) {
 	if ctx == nil || bundle == nil || store == nil || factory == nil || now == nil || ctx.Err() != nil {
-		return preserveContext(ctx, ErrProviderAccess)
+		return nil, preserveContext(ctx, ErrProviderAccess)
 	}
 	deadline, ok := ctx.Deadline()
 	if !ok || !deadline.After(now().Add(time.Second)) {
-		return preserveContext(ctx, ErrLifecycle)
+		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	controllerA, err := factory(bundle, origin, "controller_a")
 	if err != nil || !validAccess(controllerA) {
 		closeAccess(controllerA)
-		return ErrProviderAccess
+		return nil, ErrProviderAccess
 	}
-	defer closeAccess(controllerA)
-
 	switch phase {
 	case "initial":
 		controllerB, err := factory(bundle, origin, "controller_b")
 		if err != nil || !validAccess(controllerB) {
 			closeAccess(controllerB)
-			return ErrProviderAccess
+			return nil, ErrProviderAccess
 		}
 		defer closeAccess(controllerB)
-		return runInitial(ctx, store, controllerA, controllerB, now)
+		terminal, err := runInitial(ctx, store, controllerA, controllerB, now)
+		if err != nil {
+			closeAccess(controllerA)
+		}
+		return terminal, err
 	case "reconstruction":
-		return runReconstruction(ctx, store, controllerA, now)
+		defer closeAccess(controllerA)
+		return nil, runReconstruction(ctx, store, controllerA, now)
 	default:
-		return ErrLifecycle
+		return nil, ErrLifecycle
 	}
 }
 
-func runInitial(ctx context.Context, store *callerstate.Store, controllerA, controllerB *access, now func() time.Time) error {
+func runInitial(ctx context.Context, store *callerstate.Store, controllerA, controllerB *access, now func() time.Time) (*callerterminal.Authority, error) {
 	state := store.Snapshot()
 	if state.Stage != callerstate.StagePlanned {
-		return ErrLifecycle
+		return nil, ErrLifecycle
 	}
 	capabilitiesA, rawA, err := controllerA.client.DiscoverCapabilitiesDocument(ctx)
 	if err != nil {
-		return preserveContext(ctx, ErrLifecycle)
+		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	capabilitiesB, rawB, err := controllerB.client.DiscoverCapabilitiesDocument(ctx)
 	if err != nil {
-		return preserveContext(ctx, ErrLifecycle)
+		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	if !bytes.Equal(rawA, rawB) || capabilitiesA.ProviderRevisionID != capabilitiesB.ProviderRevisionID {
-		return ErrCapabilityContinuity
+		return nil, ErrCapabilityContinuity
 	}
 	if validateSelection(capabilitiesA) != nil || validateSelection(capabilitiesB) != nil {
-		return ErrCapabilitySelection
+		return nil, ErrCapabilitySelection
 	}
 	policyDigest, err := policyDigest(state)
 	if err != nil {
-		return ErrPolicy
+		return nil, ErrPolicy
 	}
 	decidedAt := now().UTC().Format(time.RFC3339Nano)
 	if err := store.BindCapabilities(capabilitiesA.ProviderRevisionID, rawA, policyDigest, decidedAt); err != nil {
-		return ErrLifecycle
+		return nil, ErrLifecycle
 	}
 	state = store.Snapshot()
 	request, err := createRequest(ctx, state, capabilitiesA, now())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	admission, err := createAdmission(controllerA, state, request, now())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	operation, err := controllerA.client.CreateSandbox(ctx, request, admission)
 	if err != nil || operation.Status != "accepted" {
-		return preserveContext(ctx, ErrLifecycle)
+		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	descriptor := provider.ReadDescriptor{
 		Operation: "read_operation", SandboxID: state.Plan.SandboxID, OperationID: state.Plan.Create.OperationID,
 		AttemptID: state.Plan.Create.AttemptID, FencingToken: createFencingToken,
 	}
-	if err := waitOperation(ctx, controllerA, state, descriptor, now); err != nil {
-		return err
+	if err := waitOperation(ctx, controllerA, state, descriptor, "create", now); err != nil {
+		return nil, err
 	}
-	if err := waitSandboxReady(ctx, controllerA, state, descriptor, now); err != nil {
-		return err
+	observedLease, err := waitSandboxReady(ctx, controllerA, state, descriptor, now)
+	if err != nil {
+		return nil, err
+	}
+	requestedLease, _ := time.Parse(time.RFC3339Nano, request.Spec.Lease.ExpiresAt)
+	if requestedLease.Before(observedLease) {
+		observedLease = requestedLease
 	}
 	if err := store.BindLifecycle(createFencingToken); err != nil {
-		return ErrLifecycle
+		return nil, ErrLifecycle
 	}
-	return nil
+	return runExecTerminal(ctx, store, controllerA, capabilitiesA, observedLease.UTC().Format(time.RFC3339Nano), now)
 }
 
 func runReconstruction(ctx context.Context, store *callerstate.Store, controllerA *access, now func() time.Time) error {
@@ -168,10 +196,11 @@ func runReconstruction(ctx context.Context, store *callerstate.Store, controller
 		Operation: "read_operation", SandboxID: state.Plan.SandboxID, OperationID: state.Lifecycle.OperationID,
 		AttemptID: state.Lifecycle.AttemptID, FencingToken: state.Lifecycle.FencingToken,
 	}
-	if err := waitOperation(ctx, controllerA, state, descriptor, now); err != nil {
+	if err := waitOperation(ctx, controllerA, state, descriptor, "create", now); err != nil {
 		return err
 	}
-	return waitSandboxReady(ctx, controllerA, state, descriptor, now)
+	_, err = waitSandboxReady(ctx, controllerA, state, descriptor, now)
+	return err
 }
 
 func buildAccess(bundle *credentials.Bundle, origin, actor string) (*access, error) {
@@ -205,11 +234,11 @@ func validateSelection(capabilities provider.ProviderCapabilities) error {
 		capabilities.Limits.MaxEphemeralStorageBytes < 268435456 || capabilities.Limits.MaxLeaseSeconds < 1 || capabilities.Limits.MaxExecSeconds < 1 {
 		return ErrCapabilitySelection
 	}
-	if !hasCapability(capabilities.Capabilities, "sandbox.exec", "1.0.0", ExecProfileID) || !hasCapability(capabilities.Capabilities, "sandbox.terminal", "1.0.0", TerminalProfileID) {
+	if !hasCapability(capabilities.Capabilities, "sandbox.exec", "1.0.0", ExecProfileID) || !hasCapability(capabilities.Capabilities, "sandbox.terminal", "1.0.0", TerminalProfileID) || !hasCapability(capabilities.Capabilities, "sandbox.terminal-connect", "1.0.0", TerminalConnectProfileID) {
 		return ErrCapabilitySelection
 	}
 	for _, profile := range capabilities.RuntimeProfiles {
-		if profile.ID == RuntimeProfileID && contains(profile.CapabilityProfileIDs, ExecProfileID) && contains(profile.CapabilityProfileIDs, TerminalProfileID) {
+		if profile.ID == RuntimeProfileID && contains(profile.CapabilityProfileIDs, ExecProfileID) && contains(profile.CapabilityProfileIDs, TerminalProfileID) && contains(profile.CapabilityProfileIDs, TerminalConnectProfileID) {
 			return nil
 		}
 	}
@@ -235,6 +264,10 @@ func contains(values []string, wanted string) bool {
 }
 
 func policyDigest(state callerstate.State) (string, error) {
+	return policyDigestFor(state.Plan.TenantAID, state.Plan.WorkOrderAID)
+}
+
+func policyDigestFor(tenantID, workOrderID string) (string, error) {
 	return jcs.Digest(struct {
 		FormatVersion int      `json:"format_version"`
 		PolicyID      string   `json:"policy_id"`
@@ -242,8 +275,8 @@ func policyDigest(state callerstate.State) (string, error) {
 		WorkOrderID   string   `json:"work_order_id"`
 		Operations    []string `json:"operations"`
 	}{
-		FormatVersion: 1, PolicyID: "external-caller-coding-shell-v1", TenantID: state.Plan.TenantAID,
-		WorkOrderID: state.Plan.WorkOrderAID, Operations: []string{"create", "read_operation", "read_sandbox"},
+		FormatVersion: 1, PolicyID: "external-caller-coding-shell-v1", TenantID: tenantID,
+		WorkOrderID: workOrderID, Operations: []string{"create", "read_operation", "read_sandbox", "exec", "cancel_exec", "read_result", "read_usage_evidence", "open_runtime_session", "read_runtime_session", "connect_runtime_session", "stage_artifact", "read_artifact_staging_evidence"},
 	})
 }
 
@@ -287,28 +320,49 @@ func createAdmission(value *access, state callerstate.State, request provider.Cr
 }
 
 func readAdmission(ctx context.Context, value *access, state callerstate.State, descriptor provider.ReadDescriptor, now time.Time) (provider.Admission, error) {
+	return readAdmissionForTenant(ctx, value, state, descriptor, state.Plan.TenantAID, state.Plan.WorkOrderAID, now)
+}
+
+func readAdmissionForTenant(ctx context.Context, value *access, state callerstate.State, descriptor provider.ReadDescriptor, tenantID, workOrderID string, now time.Time) (provider.Admission, error) {
 	digest, err := provider.DigestReadDescriptor(descriptor)
 	if err != nil {
 		return provider.Admission{}, ErrPolicy
 	}
-	contractID, path := provider.OperationDescriptorContractID, "/v1/operations/"+descriptor.OperationID
-	if descriptor.Operation == "read_sandbox" {
+	var contractID, path string
+	switch descriptor.Operation {
+	case "read_operation":
+		contractID, path = provider.OperationDescriptorContractID, "/v1/operations/"+descriptor.OperationID
+	case "read_sandbox":
 		contractID, path = provider.StatusDescriptorContractID, "/v1/sandboxes/"+descriptor.SandboxID
+	case "read_result":
+		contractID, path = provider.ExecResultDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/exec-result"
+	case "read_usage_evidence":
+		contractID, path = provider.UsageDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/usage-evidence"
+	case "read_runtime_session":
+		contractID, path = provider.SessionDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/runtime-session"
+	case "read_artifact_staging_evidence":
+		contractID, path = provider.ArtifactEvidenceDescriptorContractID, "/v1/operations/"+descriptor.OperationID+"/artifact-staging-evidence"
+	default:
+		return provider.Admission{}, ErrPolicy
 	}
 	deadline, ok := ctx.Deadline()
 	if !ok || !deadline.After(now.Add(time.Second)) {
 		return provider.Admission{}, preserveContext(ctx, ErrLifecycle)
 	}
-	return buildAdmission(value, state, provider.AdmissionBinding{
+	return buildAdmissionForTenant(value, state, provider.AdmissionBinding{
 		Operation: descriptor.Operation, SandboxID: descriptor.SandboxID, OperationID: descriptor.OperationID,
 		AttemptID: descriptor.AttemptID, FencingToken: descriptor.FencingToken,
 		DeadlineAt:        deadline.UTC().Format(time.RFC3339Nano),
 		RequestContractID: contractID, RequestDigestProfile: provider.DescriptorDigestProfile, RequestDigest: digest,
 		HTTPTarget: provider.AdmissionTarget{Method: http.MethodGet, Path: path, NormalizedQuery: []provider.QueryParameter{}},
-	}, now)
+	}, tenantID, workOrderID, now)
 }
 
 func buildAdmission(value *access, state callerstate.State, binding provider.AdmissionBinding, now time.Time) (provider.Admission, error) {
+	return buildAdmissionForTenant(value, state, binding, state.Plan.TenantAID, state.Plan.WorkOrderAID, now)
+}
+
+func buildAdmissionForTenant(value *access, state callerstate.State, binding provider.AdmissionBinding, tenantID, workOrderID string, now time.Time) (provider.Admission, error) {
 	if state.Provider == nil {
 		return provider.Admission{}, ErrPolicy
 	}
@@ -329,8 +383,20 @@ func buildAdmission(value *access, state callerstate.State, binding provider.Adm
 		return provider.Admission{}, ErrPolicy
 	}
 	binding.IssuedAt, binding.NotBefore, binding.ExpiresAt = issuedAt, issuedAt, expiresAt
-	binding.TenantID, binding.WorkOrderID = state.Plan.TenantAID, state.Plan.WorkOrderAID
-	binding.PolicyDigest, binding.PolicyDecidedAt = state.Provider.PolicyDigest, state.Provider.PolicyDecidedAt
+	policyDigest := state.Provider.PolicyDigest
+	switch {
+	case tenantID == state.Plan.TenantAID && workOrderID == state.Plan.WorkOrderAID:
+	case tenantID == state.Plan.TenantBID && workOrderID == state.Plan.WorkOrderBID:
+		var err error
+		policyDigest, err = policyDigestFor(tenantID, workOrderID)
+		if err != nil || policyDigest == state.Provider.PolicyDigest {
+			return provider.Admission{}, ErrPolicy
+		}
+	default:
+		return provider.Admission{}, ErrPolicy
+	}
+	binding.TenantID, binding.WorkOrderID = tenantID, workOrderID
+	binding.PolicyDigest, binding.PolicyDecidedAt = policyDigest, state.Provider.PolicyDecidedAt
 	if binding.DeadlineAt == "" {
 		binding.DeadlineAt = expiresAt.Format(time.RFC3339Nano)
 	}
@@ -345,7 +411,7 @@ func buildAdmission(value *access, state callerstate.State, binding provider.Adm
 	return admission, nil
 }
 
-func waitOperation(ctx context.Context, value *access, state callerstate.State, descriptor provider.ReadDescriptor, now func() time.Time) error {
+func waitOperation(ctx context.Context, value *access, state callerstate.State, descriptor provider.ReadDescriptor, expectedType string, now func() time.Time) error {
 	for attempt := 0; attempt < maxPollAttempts; attempt++ {
 		admission, err := readAdmission(ctx, value, state, descriptor, now())
 		if err != nil {
@@ -354,6 +420,9 @@ func waitOperation(ctx context.Context, value *access, state callerstate.State, 
 		operation, err := value.client.GetOperation(ctx, descriptor, admission)
 		if err != nil {
 			return preserveContext(ctx, ErrLifecycle)
+		}
+		if !operationMatches(operation, descriptor, expectedType) {
+			return ErrLifecycle
 		}
 		switch operation.Status {
 		case "succeeded":
@@ -369,32 +438,36 @@ func waitOperation(ctx context.Context, value *access, state callerstate.State, 
 	return ErrLifecycle
 }
 
-func waitSandboxReady(ctx context.Context, value *access, state callerstate.State, lifecycle provider.ReadDescriptor, now func() time.Time) error {
+func waitSandboxReady(ctx context.Context, value *access, state callerstate.State, lifecycle provider.ReadDescriptor, now func() time.Time) (time.Time, error) {
 	descriptor := lifecycle
 	descriptor.Operation = "read_sandbox"
 	for attempt := 0; attempt < maxPollAttempts; attempt++ {
 		admission, err := readAdmission(ctx, value, state, descriptor, now())
 		if err != nil {
-			return err
+			return time.Time{}, err
 		}
 		status, err := value.client.GetSandboxStatus(ctx, descriptor, admission)
 		if err != nil {
-			return preserveContext(ctx, ErrLifecycle)
+			return time.Time{}, preserveContext(ctx, ErrLifecycle)
 		}
 		if status.WorkspaceID != state.Plan.WorkspaceID || status.SandboxSlotKey != SandboxSlotKey || status.ProviderRevisionID != state.Provider.ProviderRevisionID {
-			return ErrLifecycle
+			return time.Time{}, ErrLifecycle
 		}
 		if status.DesiredState == "ready" && status.ObservedState == "ready" && status.Generation == 1 && status.ObservedGeneration == 1 && status.RuntimeProfile == RuntimeProfileID {
-			return nil
+			lease, err := time.Parse(time.RFC3339Nano, status.LeaseExpiresAt)
+			if err != nil || !lease.After(now()) {
+				return time.Time{}, ErrLifecycle
+			}
+			return lease, nil
 		}
 		if status.ObservedState != "requested" && status.ObservedState != "provisioning" {
-			return ErrLifecycle
+			return time.Time{}, ErrLifecycle
 		}
 		if err := wait(ctx); err != nil {
-			return err
+			return time.Time{}, err
 		}
 	}
-	return ErrLifecycle
+	return time.Time{}, ErrLifecycle
 }
 
 func wait(ctx context.Context) error {

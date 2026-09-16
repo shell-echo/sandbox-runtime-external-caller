@@ -11,6 +11,7 @@ import (
 
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gateway"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewaybridge"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewaycontrol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/gatewayservice"
 )
@@ -27,8 +28,9 @@ func Run(arguments []string, stdin io.Reader, stdout io.Writer) int {
 	return RunWithResolver(arguments, stdin, stdout, gatewayservice.UnavailableResolver{})
 }
 
-// RunWithResolver is an application composition boundary, not a control-selected
-// backend. Only tests currently inject a working backend; production fails closed.
+// RunWithResolver is an application composition boundary, not a wire-selected
+// backend. Tests may inject a resolver; production service v2 obtains only its
+// Caller bridge from the separately declared inherited descriptor.
 func RunWithResolver(arguments []string, stdin io.Reader, stdout io.Writer, resolver gateway.Resolver) int {
 	if len(arguments) != 0 {
 		return ExitUsage
@@ -46,7 +48,7 @@ func RunWithResolver(arguments []string, stdin io.Reader, stdout io.Writer, reso
 	if json.Unmarshal(raw, &routing) != nil {
 		return ExitData
 	}
-	if routing.ProtocolID == gatewayservice.ProtocolID {
+	if routing.ProtocolID == gatewayservice.ProtocolID || routing.ProtocolID == gatewayservice.TerminalProtocolID {
 		return runService(raw, stdout, resolver)
 	}
 	request, err := gatewaycontrol.DecodeRequest(bytes.NewReader(raw))
@@ -84,6 +86,23 @@ func runService(raw []byte, stdout io.Writer, resolver gateway.Resolver) int {
 		return ExitData
 	}
 	defer commands.Close()
+	if bootstrap.ProtocolID == gatewayservice.TerminalProtocolID {
+		backend, err := gatewayservice.OpenBackendPipe(bootstrap.BackendDescriptor)
+		if err != nil {
+			return ExitData
+		}
+		if _, unavailable := resolver.(gatewayservice.UnavailableResolver); unavailable {
+			bridge, err := gatewaybridge.NewResolver(backend)
+			if err != nil {
+				_ = backend.Close()
+				return ExitData
+			}
+			resolver = bridge
+		} else {
+			// Test-only injected resolvers never receive the production bridge.
+			_ = backend.Close()
+		}
+	}
 	if file, ok := stdout.(*os.File); ok {
 		pipe, err := gatewayservice.DuplicateOutputPipe(file)
 		if err != nil {

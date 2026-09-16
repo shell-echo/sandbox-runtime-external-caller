@@ -16,6 +16,7 @@ import (
 
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callercontrol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerstate"
+	"github.com/shell-echo/sandbox-runtime-external-caller/internal/callerterminal"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/credentials"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/protocol"
 	"github.com/shell-echo/sandbox-runtime-external-caller/internal/testcredentials"
@@ -28,6 +29,32 @@ type recordingService struct {
 	waited           bool
 	installErr       error
 	stopHook         func()
+	grantHook        func(context.Context, string, string, string, string, time.Time) (string, error)
+	revokeHook       func(context.Context, string, string) error
+	granted          bool
+	revoked          bool
+	backendSet       bool
+}
+
+func (service *recordingService) SetBackend(callerterminal.BackendOpener) error {
+	service.backendSet = true
+	return nil
+}
+
+func (service *recordingService) IssueGrant(ctx context.Context, actor, tenant, session, handoff string, expiry time.Time) (string, error) {
+	service.granted = true
+	if service.grantHook != nil {
+		return service.grantHook(ctx, actor, tenant, session, handoff, expiry)
+	}
+	return strings.Repeat("A", 43), nil
+}
+
+func (service *recordingService) Revoke(ctx context.Context, actor, token string) error {
+	service.revoked = true
+	if service.revokeHook != nil {
+		return service.revokeHook(ctx, actor, token)
+	}
+	return nil
 }
 
 func (service *recordingService) InstallPolicy(_ context.Context, tenantA, tenantB string) error {
@@ -66,11 +93,11 @@ func TestCoordinateInitialCreatesOnlyPlanAndCompletesGatewayLifecycle(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if started != 1 || !service.installed || !service.stopped || service.waited || service.tenantA == "" || service.tenantB == "" || service.tenantA == service.tenantB {
+	if started != 1 || !service.installed || !service.backendSet || !service.granted || !service.revoked || !service.stopped || service.waited || service.tenantA == "" || service.tenantB == "" || service.tenantA == service.tenantB {
 		t.Fatalf("Gateway lifecycle = start %d, service %#v", started, service)
 	}
 	state := readState(t, root)
-	if state.Stage != callerstate.StageLifecycleBound || state.StoreRevision != 3 || state.Plan.TenantAID != service.tenantA || state.Plan.TenantBID != service.tenantB {
+	if state.Stage != callerstate.StageTerminalBound || state.StoreRevision != 5 || state.Plan.TenantAID != service.tenantA || state.Plan.TenantBID != service.tenantB {
 		t.Fatalf("initial lifecycle state = %#v", state)
 	}
 	if _, err := callerstate.OpenReconstruction(root); !errors.Is(err, callerstate.ErrInvalidState) {
@@ -90,7 +117,7 @@ func TestCoordinateReconstructionRequiresCompleteStateAndDoesNotMutateIt(t *test
 		t.Fatal(err)
 	}
 	got := readState(t, root)
-	if !reflect.DeepEqual(got, want) || service.tenantA != want.Plan.TenantAID || service.tenantB != want.Plan.TenantBID || !service.stopped {
+	if !reflect.DeepEqual(got, want) || service.tenantA != want.Plan.TenantAID || service.tenantB != want.Plan.TenantBID || !service.stopped || service.granted || service.revoked {
 		t.Fatalf("reconstruction changed state or policy: got %#v service %#v", got, service)
 	}
 
@@ -178,14 +205,47 @@ func TestCoordinateRejectsStateChangedDuringGatewayLifecycle(t *testing.T) {
 	}
 }
 
-func fakeProvider(_ context.Context, phase, _ string, _ *credentials.Bundle, store *callerstate.Store) error {
+func fakeProvider(_ context.Context, phase, _ string, _ *credentials.Bundle, store *callerstate.Store) (*callerterminal.Authority, error) {
 	if phase == "reconstruction" {
-		return nil
+		return nil, nil
 	}
 	if err := store.BindCapabilities("provider-revision-1", []byte(`{"capabilities":[]}`), testDigest('f'), "2026-09-12T00:00:00Z"); err != nil {
-		return err
+		return nil, err
 	}
-	return store.BindLifecycle(1)
+	if err := store.BindLifecycle(1); err != nil {
+		return nil, err
+	}
+	if err := store.BindExec(2, testDigest('a'), testDigest('b')); err != nil {
+		return nil, err
+	}
+	if err := store.BindTerminal(3, "runtime-session-1", "ref:session:synthetic"); err != nil {
+		return nil, err
+	}
+	state := store.Snapshot()
+	return &callerterminal.Authority{
+		ProviderRevisionID: state.Provider.ProviderRevisionID, SandboxID: state.Plan.SandboxID,
+		OperationID: state.Terminal.Operation.OperationID, AttemptID: state.Terminal.Operation.AttemptID, FencingToken: 3,
+		RuntimeSessionID: state.Terminal.RuntimeSessionID, HandoffReference: state.Terminal.HandoffReference,
+		ExpiresAt: time.Now().Add(time.Minute),
+	}, nil
+}
+
+func TestCoordinateRejectsLifecycleOnlySuccess(t *testing.T) {
+	root := newPrivateRoot(t)
+	bundle := testBundle(t)
+	defer bundle.Destroy()
+	service := &recordingService{}
+	err := Coordinate(context.Background(), testRequest("initial", root), bundle, func(context.Context, string, string, *credentials.Bundle) (GatewayService, error) {
+		return service, nil
+	}, func(_ context.Context, _, _ string, _ *credentials.Bundle, store *callerstate.Store) (*callerterminal.Authority, error) {
+		if err := store.BindCapabilities("provider-revision-1", []byte(`{"capabilities":[]}`), testDigest('f'), "2026-09-12T00:00:00Z"); err != nil {
+			return nil, err
+		}
+		return nil, store.BindLifecycle(1)
+	})
+	if err != ErrPhaseState || service.stopped || !service.waited || service.granted || readState(t, root).Stage != callerstate.StageLifecycleBound {
+		t.Fatalf("incomplete success = %v", err)
+	}
 }
 
 func testRequest(phase, root string) callercontrol.Request {
