@@ -87,7 +87,9 @@ The repository also defines
 `.github/workflows/release-provenance.yml`. It uses commit-pinned checkout,
 Go-setup, artifact-upload and GitHub build-provenance actions on an Ubuntu 24.04
 hosted runner. The workflow reruns the complete race/shuffle suite and vet,
-builds and verifies a `linux/amd64` bundle, checks the exact locked Provider
+serializing test packages because several suites compile and supervise real
+child executables on the bounded runner. It then builds and verifies a
+`linux/amd64` bundle, checks the exact locked Provider
 authority at revision `22ba6987ea5fbc37d53942720133c0acad199edd`, uploads the
 bundle without compression, and requests one GitHub/Sigstore attestation over
 the source archive, manifest and all three executables. A successful run and

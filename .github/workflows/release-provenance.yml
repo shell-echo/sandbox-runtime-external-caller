@@ -28,7 +28,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          go test -race -shuffle=on -count=1 ./...
+          # Several packages intentionally compile and supervise real child
+          # executables. Serialize packages on the bounded hosted runner so
+          # those builds are not killed by cross-package resource contention.
+          go test -race -shuffle=on -count=1 -p=1 ./...
           go vet ./...
 
       - name: Build content-addressed linux amd64 release
