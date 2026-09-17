@@ -1,11 +1,12 @@
 # Status
 
-Current checkpoint: **e1.8b prerequisite in progress; e1.8a complete**. The
+Current checkpoint: **e1.8b live run pending; its image/provenance prerequisite
+is complete and e1.8a is complete**. The
 deterministic bundle, public source, GitHub-hosted Linux/amd64 rebuild,
 five-subject Sigstore/Rekor attestation, downloaded-byte verification and
 independent subject verification all pass. The caller now selects the published
-coding/shell image by immutable index digest; refreshed candidate provenance and
-the live supervised run remain open. Of the 13 checkpoints in
+coding/shell image by immutable index digest, and refreshed candidate provenance
+has been independently verified. The live supervised run remains open. Of the 13 checkpoints in
 [`PLAN.md`](PLAN.md), 11 are complete and **2 remain**.
 Sections below record evidence at each checkpoint, not simultaneous current
 claims.
@@ -1606,9 +1607,10 @@ Next checkpoint: e1.8b, the independently supervised initial/reconstruction run
 against a live runtime with operator-owned observers and teardown. **Two large
 checkpoints and five merged execution steps remain; e1.8a is complete.**
 
-## e1.8b published runtime-image prerequisite
+## e1.8b published runtime-image and candidate-provenance prerequisite
 
-The current worktree replaces the synthetic
+External-caller merge `6d18ce3d091ec7da141565d1c93ebfab0eeb55fa`
+replaces the synthetic
 `registry.invalid/sandbox/base@sha256:dddd...` create policy with exact image
 `ghcr.io/shell-echo/sandbox-runtime-coding-shell@sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1`.
 The Provider repository records that exact linux/amd64 plus linux/arm64/v8 OCI
@@ -1621,11 +1623,37 @@ digest authority.
 The public Contract and qualification authorities are byte-identical, so the
 authority lock deliberately remains at snapshot `96ee9933...`; changing that
 identity would manufacture an authority refresh with no authority-byte change.
-The provenance workflow instead checks those locked public bytes from Provider
+The provenance workflow checks those locked public bytes from Provider
 merge `ea3c06c`, which also contains the accepted image publication record.
 
-This removes the known synthetic-image blocker only. It is not evidence that
-the image was pulled or executed by this candidate, that the 15+5 cases passed,
-or that cleanup and independent observations exist. A new commit, hosted
-candidate build/attestation, independently supervised live initial plus
-reconstruction run, and final report remain separate gates.
+Hosted run `35175318990` passed the serialized full race/shuffle suite, vet,
+deterministic Linux/amd64 build, strict bundle verification, locked-authority
+verification, upload and attestation. Artifact `10477793808` has archive digest
+`sha256:64df25eb47810e170525e11455602127d16b5b80f8d3a51f7ad0ebeff00c6a5d`
+and expires at `2026-10-17T02:43:46Z`. Strict local verification returned
+manifest self-digest
+`sha256:6f1d07d26001e939d34a37d28a774dc281627d61f65228e5c92d3ab690625013`.
+
+Attestation `48082145` binds source archive
+`sha256:9ea36cd5aaf2b22898255a22caa6b4e17d1079707a8bdc70ed6676037b9932b5`,
+raw manifest
+`sha256:aaf82b31e90aa1b846377a39c9bbd03b996c6ce5e1f95b04bfe01ad2574ecdf3`,
+qualification adapter
+`sha256:86e4a1eda8d65ddca3d39924f585c1dfb79eb348758065cc2ef4e2166c31cb5d`,
+external caller
+`sha256:8b2936d4e0e5754988fa0545094ad086e1560e1259661666bfe49dd0a64d2c79`
+and caller Gateway
+`sha256:fb19d045119c8971cd3696496df41d65b8213a4b3889b81f103fe6edd84ad5fd`.
+Independent `gh attestation verify` succeeded for all five retained files and
+confirmed the public repository, `main` ref, exact source/workflow SHA,
+GitHub-hosted runner, workflow-dispatch trigger, SLSA predicate, run attempt and
+Rekor timestamp; transparency-log index is `2871749564`.
+
+This closes the known synthetic-image and refreshed candidate-provenance
+prerequisite only. It is not evidence that the image was pulled or executed by
+this candidate, that the 15+5 cases passed, or that cleanup and independent
+observations exist. The independently supervised live initial plus
+reconstruction run and final report remain separate gates.
+
+The later documentation-only evidence commit is not part of the retained
+candidate and does not replace its `6d18ce3d...` source identity.
