@@ -15,9 +15,9 @@ The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
 `c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38`, the 53-case local Suite, and the
 refreshed P2.7 profile/report/protocol authorities from public authority
-snapshot `96ee9933fe2a3bcfaef291b486cd6b8f7095539a`. The raw
+snapshot `66dc11f11584df2c15804ee10a3bfcd0294600b0`. The raw
 `authority.lock.json` digest is
-`sha256:e39a5f9bd3e237a94c70cef0801dd2a4f32e3b188e46bc408938c1e34f38a595`.
+`sha256:eb00103fe648f6386e90cdce1444e4ffa91288f685c12932c2589d009ce6bce0`.
 These committed authorities are inputs to release provenance, not a
 qualification result.
 

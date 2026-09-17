@@ -114,7 +114,7 @@ func runCapabilityDiscoveryScenario(ctx context.Context, origin string, bundle *
 	}
 	if protocol.ContractRevision != "22ba6987ea5fbc37d53942720133c0acad199edd" || protocol.ContractTree != "c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38" ||
 		protocol.ProfileID != "sandbox-runtime-external-caller-coding-shell-v1" || protocol.ProfileVersion != "1.0.0" ||
-		protocol.ProfileDigest != "sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14" || protocol.ValidateScenarioResultData("initial", result) != nil {
+		protocol.ProfileDigest != "sha256:ec113d31612dbb7cc0e9461925170f74f33722bb2efb237dbc68aa89f2d60231" || protocol.ValidateScenarioResultData("initial", result) != nil {
 		return protocol.ScenarioResultData{}, provider.ProviderCapabilities{}, ErrCapabilityScenario
 	}
 	if store.BindCapabilities(discoveryA.document.ProviderRevisionID, discoveryA.raw, policyDigest, policyDecisionAt(now())) != nil || store.ValidateUnchanged() != nil {

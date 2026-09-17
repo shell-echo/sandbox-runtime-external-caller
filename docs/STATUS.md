@@ -15,16 +15,16 @@ Current pinned authority: Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
 `c9a7054d7c8e7f4b6e32f38175ceedddc48c2d38`, 53-case local Suite
 `sha256:b40c932643f4a1e5fd6681e3abf9b64a607609866a6254456970f8b8034cf2a8`,
-profile `sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14`,
-report schema `sha256:cd51ccf0aea0bc31b11ff4f288751fc7df0f0dd081860efc305182ea61f842e4`,
-validator semantics `sha256:c724eaa9f3b52e1a5ba4aa5aaeb5e8b61a744818b2f56fd8ff52dfa5e1e584df`,
-adapter schema `sha256:d12b477cd540e02c6a7e2f8eb77b0405b717c15e98a0f144b2d63f705ff95969`,
+profile `sha256:ec113d31612dbb7cc0e9461925170f74f33722bb2efb237dbc68aa89f2d60231`,
+report schema `sha256:5d97e10c8b5b2f365e275e78868d5a35d78bbdffdec05ea2f18b5c947cd429f6`,
+validator semantics `sha256:bc0b5be7aefcebb6a71871d9724cd671235b6ef2bf453a1954313547ad379ed9`,
+adapter schema `sha256:fdee270ca27003693b2ce504da769c9779825312e1dd4e06b5caf8578f5ee03c`,
 and adapter semantics
-`sha256:10cd42017aee60b620dbbb7394a20c2a387983468a865a8d12a572f861d07662`.
+`sha256:997c49cd1a5b2c050d48333a973dd78b611221f869bf709cf6d1a8d771795a99`.
 The public authority snapshot containing those qualification authorities is
-`96ee9933fe2a3bcfaef291b486cd6b8f7095539a`.
+`66dc11f11584df2c15804ee10a3bfcd0294600b0`.
 The raw authority-lock digest is
-`sha256:e39a5f9bd3e237a94c70cef0801dd2a4f32e3b188e46bc408938c1e34f38a595`.
+`sha256:eb00103fe648f6386e90cdce1444e4ffa91288f685c12932c2589d009ce6bce0`.
 The authority verifier passes against that committed snapshot. This establishes
 the input boundary, not a qualification result.
 
@@ -1620,11 +1620,12 @@ and attestation `48073123`. The create-request test requires the production
 repository and digest separately, preventing a mutable tag from replacing the
 digest authority.
 
-The public Contract and qualification authorities are byte-identical, so the
-authority lock deliberately remains at snapshot `96ee9933...`; changing that
-identity would manufacture an authority refresh with no authority-byte change.
-The provenance workflow checks those locked public bytes from Provider
-merge `ea3c06c`, which also contains the accepted image publication record.
+The Provider Contract bytes and Contract tree remain unchanged. The
+qualification profile authority was later refreshed at Provider revision
+`66dc11f...` to model independently observed nonterminal HTTP 200 operation and
+sandbox polling separately from retryable 429/503 transport outcomes. The
+external caller therefore pins that newer source revision while retaining the
+same Provider Contract tree and image provenance.
 
 Hosted run `35175318990` passed the serialized full race/shuffle suite, vet,
 deterministic Linux/amd64 build, strict bundle verification, locked-authority
