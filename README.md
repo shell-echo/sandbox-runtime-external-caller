@@ -21,6 +21,14 @@ snapshot `96ee9933fe2a3bcfaef291b486cd6b8f7095539a`. The raw
 These committed authorities are inputs to release provenance, not a
 qualification result.
 
+The candidate runtime policy now pins the published coding/shell image as
+`ghcr.io/shell-echo/sandbox-runtime-coding-shell@sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1`.
+The Provider repository records that exact two-platform index at merge
+`ea3c06cf655a70ac595d1833949408233962e285`, backed by publication run
+`35171475925` and attestation `48073123`. This immutable selection removes the
+synthetic runtime-image blocker; it does not itself prove a live runtime run,
+refresh this candidate's release provenance, or establish qualification.
+
 ## Current scope
 
 The completed e1.1 foundation establishes:

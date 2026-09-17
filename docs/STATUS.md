@@ -1,9 +1,12 @@
 # Status
 
-Current checkpoint: **e1.8a complete**. The deterministic bundle, public source,
-GitHub-hosted Linux/amd64 rebuild, five-subject Sigstore/Rekor attestation,
-downloaded-byte verification and independent subject verification all pass. Of
-the 13 checkpoints in [`PLAN.md`](PLAN.md), 11 are complete and **2 remain**.
+Current checkpoint: **e1.8b prerequisite in progress; e1.8a complete**. The
+deterministic bundle, public source, GitHub-hosted Linux/amd64 rebuild,
+five-subject Sigstore/Rekor attestation, downloaded-byte verification and
+independent subject verification all pass. The caller now selects the published
+coding/shell image by immutable index digest; refreshed candidate provenance and
+the live supervised run remain open. Of the 13 checkpoints in
+[`PLAN.md`](PLAN.md), 11 are complete and **2 remain**.
 Sections below record evidence at each checkpoint, not simultaneous current
 claims.
 
@@ -1602,3 +1605,27 @@ shell-echo/sandbox-runtime-external-caller` checks exited successfully.
 Next checkpoint: e1.8b, the independently supervised initial/reconstruction run
 against a live runtime with operator-owned observers and teardown. **Two large
 checkpoints and five merged execution steps remain; e1.8a is complete.**
+
+## e1.8b published runtime-image prerequisite
+
+The current worktree replaces the synthetic
+`registry.invalid/sandbox/base@sha256:dddd...` create policy with exact image
+`ghcr.io/shell-echo/sandbox-runtime-coding-shell@sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1`.
+The Provider repository records that exact linux/amd64 plus linux/arm64/v8 OCI
+index in merge `ea3c06cf655a70ac595d1833949408233962e285`, from source
+`cf1830e9bbfcd08d6f171e60f67d949d839e1069`, publication run `35171475925`
+and attestation `48073123`. The create-request test requires the production
+repository and digest separately, preventing a mutable tag from replacing the
+digest authority.
+
+The public Contract and qualification authorities are byte-identical, so the
+authority lock deliberately remains at snapshot `96ee9933...`; changing that
+identity would manufacture an authority refresh with no authority-byte change.
+The provenance workflow instead checks those locked public bytes from Provider
+merge `ea3c06c`, which also contains the accepted image publication record.
+
+This removes the known synthetic-image blocker only. It is not evidence that
+the image was pulled or executed by this candidate, that the 15+5 cases passed,
+or that cleanup and independent observations exist. A new commit, hosted
+candidate build/attestation, independently supervised live initial plus
+reconstruction run, and final report remain separate gates.

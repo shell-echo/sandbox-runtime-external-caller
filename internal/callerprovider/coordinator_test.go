@@ -199,7 +199,7 @@ func TestInitialBindsExactCapabilitiesAndSucceededLifecycle(t *testing.T) {
 		t.Fatalf("create/close counts = %d/%d", len(clients["controller_a"].creates), closed)
 	}
 	request := clients["controller_a"].creates[0]
-	if request.Spec.SandboxID != state.Plan.SandboxID || request.Spec.TenantID != state.Plan.TenantAID || request.Spec.RuntimeProfile != RuntimeProfileID || request.Spec.Resources.CPUMillis != 500 || request.Spec.Resources.PIDsLimit != 64 || request.RequestDigest == "" {
+	if request.Spec.SandboxID != state.Plan.SandboxID || request.Spec.TenantID != state.Plan.TenantAID || request.Spec.RuntimeProfile != RuntimeProfileID || request.Spec.Image.Reference != ImageReference || request.Spec.Image.Digest != ImageDigest || request.Spec.Resources.CPUMillis != 500 || request.Spec.Resources.PIDsLimit != 64 || request.RequestDigest == "" {
 		t.Fatalf("caller create request = %#v", request)
 	}
 	seenJTI := map[string]struct{}{}
@@ -214,6 +214,14 @@ func TestInitialBindsExactCapabilitiesAndSucceededLifecycle(t *testing.T) {
 			t.Fatalf("admission expiry %d exceeds phase deadline", admission.Claims.ExpiresAt)
 		}
 		seenJTI[admission.Claims.JTI] = struct{}{}
+	}
+}
+
+func TestProductionRuntimeImagePin(t *testing.T) {
+	const repository = "ghcr.io/shell-echo/sandbox-runtime-coding-shell"
+	const digest = "sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1"
+	if ImageReference != repository || ImageDigest != digest || strings.Contains(ImageReference, "@") || strings.Contains(ImageReference, ":sha-") {
+		t.Fatalf("runtime image pin = %q @ %q", ImageReference, ImageDigest)
 	}
 }
 
