@@ -52,7 +52,10 @@ func (executor *InitialScenarioExecutor) executeGatewayGrantExpiry(ctx context.C
 	if err != nil {
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
-	grantExpiry := startedAt.Add(gatewayExpiryGrantLifetime)
+	// Gateway process startup, policy installation and backend binding are not
+	// part of the grant lifetime. Start the short-lived authority immediately
+	// before issuance while still clipping it to the Provider handoff and case.
+	grantExpiry := executor.now().Add(gatewayExpiryGrantLifetime)
 	caseBound := deadline.Add(-gatewayExpiryCloseGrace)
 	if handoffExpiry.Before(grantExpiry) {
 		grantExpiry = handoffExpiry
