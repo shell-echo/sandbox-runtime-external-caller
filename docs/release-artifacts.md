@@ -110,3 +110,20 @@ and published the immutable references. The downloaded bundle passed `-verify`,
 and all five subjects separately passed `gh attestation verify`. Those external
 observations close e1.8a; they do not establish the later supervisor/runtime
 qualification evidence.
+
+The image-pinned successor candidate at merge
+`6d18ce3d091ec7da141565d1c93ebfab0eeb55fa` was rebuilt by hosted run
+`35175318990`. Artifact `10477793808` has archive digest
+`sha256:64df25eb47810e170525e11455602127d16b5b80f8d3a51f7ad0ebeff00c6a5d`;
+its downloaded bundle passed strict verification with manifest self-digest
+`sha256:6f1d07d26001e939d34a37d28a774dc281627d61f65228e5c92d3ab690625013`.
+Attestation `48082145` covers the source archive, raw manifest and three
+executables. All five downloaded subjects independently passed
+`gh attestation verify`, which bound the exact public repository, `main` ref,
+source/workflow SHA, GitHub-hosted runner, workflow-dispatch trigger, SLSA
+predicate, run attempt and Rekor timestamp. This refresh makes the exact
+image-pinned artifact available to the e1.8b supervisor; it is not itself a
+live-runtime or qualification result.
+
+The subsequent documentation-only evidence commit is outside that retained
+bundle and does not change its `6d18ce3d...` source identity.
