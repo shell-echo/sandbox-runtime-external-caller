@@ -35,7 +35,10 @@ const (
 	terminalFencingToken = int64(3)
 	artifactFencingToken = int64(6)
 	maxPollAttempts      = 64
-	pollInterval         = 25 * time.Millisecond
+	// A successful read can still report an accepted/running semantic state.
+	// Keep those polls bounded by the case deadline, but do not exhaust the
+	// profile's 64-attempt ceiling before a native container can start.
+	pollInterval = 250 * time.Millisecond
 )
 
 var (
