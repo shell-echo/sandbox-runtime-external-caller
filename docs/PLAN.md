@@ -19,14 +19,12 @@ be explained explicitly instead of silently resetting the count.
 | 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Complete (local synthetic/process composition) |
 | 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Complete (candidate process closure; operator cleanup still external) |
 | 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | Complete (public hosted build and five-subject attestation verified) |
-| 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending (published runtime image and refreshed candidate provenance verified; live run remains) |
+| 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Complete (hosted native Linux/Docker 15+5 run, exact 91-fact observation set and stable zero-resource teardown verified) |
 | 13 | e1.8c | Closed report, receipt, independent validation and final qualification disposition | Pending |
 
-After checkpoint 11, **2 checkpoints remain** in independent qualification
-(12-13). They comprise five merged execution steps: three for the independently
-supervised run and two for report/receipt/conclusion. Each of the 15+5 cases is a
-test obligation within its checkpoint, not an additional checkpoint in this
-count.
+After checkpoint 12, **1 checkpoint remains** in independent qualification:
+e1.8c report/receipt/conclusion. Each of the 15+5 cases is a test obligation
+within e1.8b, not an additional checkpoint in this count.
 
 The first e1.8b prerequisite replaces the synthetic `registry.invalid` image
 with the Provider-published coding/shell OCI index
@@ -34,8 +32,10 @@ with the Provider-published coding/shell OCI index
 It remains caller-owned selection policy: the Provider does not adapt its API
 for this candidate. Hosted run `35175318990` rebuilt and attested the exact
 image-pinned candidate, and the downloaded bundle plus all five subjects passed
-independent verification. The independently supervised live run remains a
-separate gate.
+independent verification. Hosted native Linux/Docker run `35198049461`
+subsequently closed the independently supervised execution and cleanup
+checkpoint. The final closed report, receipt, archive validation and
+disposition remain separate.
 
 Checkpoint 7 includes the exec/result/usage/session/handoff coordinator,
 caller Gateway grant/expiry/revocation, protected Provider WebSocket connector,

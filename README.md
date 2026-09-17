@@ -6,10 +6,11 @@ use generated code from the locked public Contract, but it must not import or
 copy Provider implementation packages or either repository's reference E2E
 caller.
 
-The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 11 of 13
-checkpoints are complete; 2 remain. Checkpoint e1.8a is complete with public
-source hosting, a GitHub-hosted reproducible build, a five-subject Sigstore
-attestation and independent verification of every retained subject.
+The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 12 of 13
+checkpoints are complete; 1 remains. Checkpoint e1.8b completed the hosted
+native Linux/Docker 15+5 run, exact 91-fact observation match and stable
+zero-resource teardown. e1.8c remains for the closed report, receipt, evidence
+archive validation and final bounded disposition.
 
 The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -29,8 +30,14 @@ The Provider repository records that exact two-platform index at merge
 then produced refreshed hosted run `35175318990`, artifact `10477793808` and
 five-subject attestation `48082145`; the downloaded bundle and all five subjects
 were independently verified. This closes the immutable image-selection and
-candidate-provenance prerequisite. It does not prove a live runtime run or
-establish qualification.
+candidate-provenance prerequisite. Hosted run `35198049461` then executed all
+15 initial and 5 reconstruction cases against the live native Linux/Docker
+target, matched the exact 91 required observation tuples, verified actual
+runtime restrictions and cross-restart shell continuity, and completed all
+three stable zero-resource samples. Checkpoint artifact `10486252703` has raw
+SHA-256
+`d540eb2ada42056ff22a8bde11508c27cd95b1f8f63c003e033761bd1a043200`.
+This closes e1.8b execution and cleanup, not the final qualification result.
 
 ## Current scope
 
@@ -353,8 +360,8 @@ candidate cannot self-certify external evidence. Public hosted run
 `35068957048` built and uploaded the exact `58a211f0...` Linux/amd64 bundle and
 created Sigstore/Rekor attestation `47846951` over its source archive, manifest
 and three executables. The downloaded bundle passed the strict verifier and all
-five `gh attestation verify` checks. Qualification supervisor observation
-remains the separate e1.8b/e1.8c gate.
+five `gh attestation verify` checks. Qualification report assembly, receipt,
+archive validation and final disposition remain the separate e1.8c gate.
 
 ## Verify the locked inputs
 

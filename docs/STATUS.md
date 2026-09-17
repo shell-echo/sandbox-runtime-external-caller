@@ -1,13 +1,12 @@
 # Status
 
-Current checkpoint: **e1.8b live run pending; its image/provenance prerequisite
-is complete and e1.8a is complete**. The
-deterministic bundle, public source, GitHub-hosted Linux/amd64 rebuild,
-five-subject Sigstore/Rekor attestation, downloaded-byte verification and
-independent subject verification all pass. The caller now selects the published
-coding/shell image by immutable index digest, and refreshed candidate provenance
-has been independently verified. The live supervised run remains open. Of the 13 checkpoints in
-[`PLAN.md`](PLAN.md), 11 are complete and **2 remain**.
+Current checkpoint: **e1.8b supervised execution and cleanup are complete;
+e1.8c remains**. The deterministic bundle, public source, GitHub-hosted
+Linux/amd64 rebuild, five-subject Sigstore/Rekor attestation, downloaded-byte
+verification and independent subject verification all pass. The candidate then
+completed the native Linux/Docker 15+5 run with the exact 91-fact observation
+set and stable zero-resource teardown. Of the 13 checkpoints in
+[`PLAN.md`](PLAN.md), 12 are complete and **1 remains**.
 Sections below record evidence at each checkpoint, not simultaneous current
 claims.
 
@@ -1658,3 +1657,42 @@ reconstruction run and final report remain separate gates.
 
 The later documentation-only evidence commit is not part of the retained
 candidate and does not replace its `6d18ce3d...` source identity.
+
+## e1.8b independently supervised live execution and cleanup
+
+Status: **complete as an execution/observation/cleanup checkpoint; not the final
+qualification disposition**.
+
+GitHub-hosted native Linux/Docker run
+[`35198049461`](https://github.com/shell-echo/sandbox-runtime/actions/runs/35198049461)
+executed Provider/operator revision
+`131fc8ffb58e5080637defb3f23566665aea89a6` with candidate revision
+`07d966c49c08f7ce4254a8b3891f404f12b3151d` and locked profile
+`sha256:ec113d31612dbb7cc0e9461925170f74f33722bb2efb237dbc68aa89f2d60231`.
+All 15 initial and 5 reconstruction scenarios passed. The 91 emitted
+observation tuples exactly equal the 91 profile requirements and every tuple is
+`observed`. The run recorded 37 Provider HTTP requests, 10 Provider mutation
+write attempts, 8 distinct Provider mutations, 3 exec requests, 2 admitted
+exec operations, 1 terminal session, 2 artifact requests, 1 admitted artifact
+operation, 6 Gateway connection attempts and 1 Gateway mutation write attempt.
+
+The observer verified the requested sandbox resources (`cpu_millis=500`,
+`memory_bytes=268435456`, `ephemeral_storage_bytes=268435456`, `pids=64`)
+against the actual Docker HostConfig, including swap, tmpfs, read-only root,
+disabled network, dropped capabilities and `no-new-privileges`. The initial
+terminal established shell-continuity digest
+`sha256:1e23e14c1dd3fa48aae2ebf2b259c66bb2644689f3704aa96ed25f216cafb59d`;
+the reconstruction phase verified it after process replacement without
+exposing the raw challenge. The sanitized transcript digest is
+`sha256:523ac290eedb40da1afdf059a448599ad40dae95158d4bb86cdf335a8a7577de`.
+
+Teardown returned the same authoritative run-owned resource scope from
+baseline 0/current 1 to post-cleanup 0 and retained all three required
+one-second-spaced zero samples. Artifact
+`external-caller-execution-checkpoint` (`10486252703`) was completed at
+`2026-09-17T08:08:28.892658674Z`; the downloaded checkpoint raw SHA-256 is
+`d540eb2ada42056ff22a8bde11508c27cd95b1f8f63c003e033761bd1a043200`.
+
+This checkpoint does not itself issue a qualification result. e1.8c must still
+assemble the closed report and receipt, validate the retained evidence set,
+record the archive identity and state the bounded final disposition.
