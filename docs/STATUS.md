@@ -1,12 +1,12 @@
 # Status
 
-Current checkpoint: **e1.8b supervised execution and cleanup are complete;
-e1.8c remains**. The deterministic bundle, public source, GitHub-hosted
+Current checkpoint: **e1.8c is complete; all 13/13 checkpoints pass and 0
+remain**. The deterministic bundle, public source, GitHub-hosted
 Linux/amd64 rebuild, five-subject Sigstore/Rekor attestation, downloaded-byte
 verification and independent subject verification all pass. The candidate then
 completed the native Linux/Docker 15+5 run with the exact 91-fact observation
-set and stable zero-resource teardown. Of the 13 checkpoints in
-[`PLAN.md`](PLAN.md), 12 are complete and **1 remains**.
+set and stable zero-resource teardown, closed report/receipt/archive and
+fresh-process retained verification.
 Sections below record evidence at each checkpoint, not simultaneous current
 claims.
 
@@ -1693,6 +1693,44 @@ one-second-spaced zero samples. Artifact
 `2026-09-17T08:08:28.892658674Z`; the downloaded checkpoint raw SHA-256 is
 `d540eb2ada42056ff22a8bde11508c27cd95b1f8f63c003e033761bd1a043200`.
 
-This checkpoint does not itself issue a qualification result. e1.8c must still
-assemble the closed report and receipt, validate the retained evidence set,
-record the archive identity and state the bounded final disposition.
+This checkpoint did not itself issue a qualification result; the subsequent
+e1.8c checkpoint below assembled and validated the closed result.
+
+## e1.8c closed qualification result
+
+Status: **complete; checkpoint 13/13, 0 remain**.
+
+GitHub-hosted native Linux/Docker run
+[`35203241121`](https://github.com/shell-echo/sandbox-runtime/actions/runs/35203241121)
+executed Provider/operator revision
+`170459266af5f4fad359ca8c63f2ae19741055c5` with this repository at
+`b3ebcc783e5db20395e29b029e0eb55f7819b49b`. The same supervised run retained
+the exact adapter transcript projection, all per-scenario intervals, 29 actual
+caller assertions and five digest-bound trusted-input statements; no field was
+backfilled from the earlier e1.8b checkpoint.
+
+The report validator accepted all 15 initial plus 5 reconstruction scenarios,
+91 named observations, the stable zero-resource cleanup and the complete
+identity bindings. Report digest is
+`sha256:34b9ea890d01f7169ed1649a0f4d88119486775bc1ad3ee4cc559ffd79193ef8`;
+payload-inventory digest is
+`sha256:96fc1f96c4c415811510e18235d67fd7fdba2aeb883a7e629eb26817a3f25e68`.
+The retained result is `run_outcome=passed`,
+`validation_outcome=accepted`, seven files and 153,461 bytes.
+
+Artifact `external-caller-qualification-result` (`10488622806`) contains only
+`execution-checkpoint.json`, `qualification-evidence.tar` and
+`qualification-result.json`. Their raw SHA-256 identities are respectively:
+
+- `sha256:ce8394c3f0213f89bfb01be027016bcbeb272a24c014030a9bc8007d9ab7536f`;
+- `sha256:ada1cae128a41e6b694ff413aab179c0eff94b42663ece8233dbb358e319e9bd`;
+- `sha256:d5e6fd528f2302252a38f49aa466c85767106a8bcef430120f230a8127f96758`.
+
+The workflow verified the bundle in a fresh process before upload. The
+downloaded artifact was independently verified again against the locked
+Provider source; deterministic archive reconstruction, receipt bytes, report,
+payload inventory, checkpoint and trusted revision bindings all matched. The
+final envelope records `qualified` only for
+`sandbox-runtime-external-caller-coding-shell-v1`. It explicitly does not claim
+aggregate conformance, deployment readiness, HA, hostile multi-tenant
+isolation, multi-controller reliability or production readiness.

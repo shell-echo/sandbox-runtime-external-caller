@@ -6,11 +6,10 @@ use generated code from the locked public Contract, but it must not import or
 copy Provider implementation packages or either repository's reference E2E
 caller.
 
-The remaining work is tracked in [`docs/PLAN.md`](docs/PLAN.md): 12 of 13
-checkpoints are complete; 1 remains. Checkpoint e1.8b completed the hosted
-native Linux/Docker 15+5 run, exact 91-fact observation match and stable
-zero-resource teardown. e1.8c remains for the closed report, receipt, evidence
-archive validation and final bounded disposition.
+The delivery plan in [`docs/PLAN.md`](docs/PLAN.md) is complete: 13 of 13
+checkpoints passed. Checkpoint e1.8c closed the report, validator receipt,
+deterministic evidence archive, independent retained-bundle verification and
+the bounded final disposition.
 
 The current authority lock pins Provider Contract revision
 `22ba6987ea5fbc37d53942720133c0acad199edd`, tree
@@ -37,7 +36,20 @@ runtime restrictions and cross-restart shell continuity, and completed all
 three stable zero-resource samples. Checkpoint artifact `10486252703` has raw
 SHA-256
 `d540eb2ada42056ff22a8bde11508c27cd95b1f8f63c003e033761bd1a043200`.
-This closes e1.8b execution and cleanup, not the final qualification result.
+Final hosted run `35203241121` at Provider source
+`170459266af5f4fad359ca8c63f2ae19741055c5` and this repository's source
+`b3ebcc783e5db20395e29b029e0eb55f7819b49b` passed the closed qualification.
+Artifact `10488622806` binds checkpoint
+`sha256:ce8394c3f0213f89bfb01be027016bcbeb272a24c014030a9bc8007d9ab7536f`,
+seven-file evidence archive
+`sha256:ada1cae128a41e6b694ff413aab179c0eff94b42663ece8233dbb358e319e9bd`
+and result envelope
+`sha256:d5e6fd528f2302252a38f49aa466c85767106a8bcef430120f230a8127f96758`.
+The report is `passed`, validation is `accepted`, and disposition is
+`qualified` only for the exact recorded caller, Provider, Contract/profile,
+artifacts, topology and scenarios. Aggregate conformance, multi-controller,
+hostile multi-tenant isolation, HA, deployment and production readiness remain
+explicit non-claims.
 
 ## Current scope
 
