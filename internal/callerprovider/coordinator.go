@@ -25,8 +25,8 @@ const (
 	ExecProfileID            = "exec-v1"
 	TerminalProfileID        = "terminal-v1"
 	TerminalConnectProfileID = "terminal-connect-v1"
-	ImageReference           = "registry.invalid/sandbox/base"
-	ImageDigest              = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	ImageReference           = "ghcr.io/shell-echo/sandbox-runtime-coding-shell"
+	ImageDigest              = "sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1"
 	EmptyBaseDigest          = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	SandboxSlotKey           = "primary-code"
 

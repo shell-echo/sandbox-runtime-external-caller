@@ -19,7 +19,7 @@ be explained explicitly instead of silently resetting the count.
 | 9 | e1.7b | All 5 reconstruction cases with retained caller state and no harness correlation reinjection | Complete (local synthetic/process composition) |
 | 10 | e1.7c | Teardown, residual resources, failure mapping and final transcript ordering/limits | Complete (candidate process closure; operator cleanup still external) |
 | 11 | e1.8a | Reproducible artifacts, immutable release/source identity, build commands/digests and provenance | Complete (public hosted build and five-subject attestation verified) |
-| 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending |
+| 12 | e1.8b | Independently supervised initial/reconstruction run with live runtime and observers | Pending (published runtime image pinned locally; candidate provenance refresh and live run remain) |
 | 13 | e1.8c | Closed report, receipt, independent validation and final qualification disposition | Pending |
 
 After checkpoint 11, **2 checkpoints remain** in independent qualification
@@ -27,6 +27,13 @@ After checkpoint 11, **2 checkpoints remain** in independent qualification
 supervised run and two for report/receipt/conclusion. Each of the 15+5 cases is a
 test obligation within its checkpoint, not an additional checkpoint in this
 count.
+
+The first e1.8b prerequisite replaces the synthetic `registry.invalid` image
+with the Provider-published coding/shell OCI index
+`sha256:1996e44f8ddc464f22556bd57f1c69079fe6b1a821b65bd9be24f86619c31bb1`.
+It remains caller-owned selection policy: the Provider does not adapt its API
+for this candidate. A refreshed hosted candidate build/attestation and the
+independently supervised live run are still separate gates.
 
 Checkpoint 7 includes the exec/result/usage/session/handoff coordinator,
 caller Gateway grant/expiry/revocation, protected Provider WebSocket connector,
