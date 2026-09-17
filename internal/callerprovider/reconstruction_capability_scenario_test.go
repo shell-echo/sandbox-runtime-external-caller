@@ -100,7 +100,7 @@ func TestReconstructionCapabilityRetries503AndRejectsContinuityChange(t *testing
 			if test.wantError == nil && (result.Interactions[0].WireAttempts != 2 || len(result.Interactions[0].TransientOutcomes) != 1) {
 				t.Fatalf("retry result = %#v", result)
 			}
-			if test.wantError != nil && (!service.stopped || closed != 1 || executor.next != 0) {
+			if test.wantError != nil && (service.stopped || service.installed || service.stopCalls != 0 || closed != 1 || executor.next != 0) {
 				t.Fatalf("continuity failure cleanup = service %#v closed %d next %d", service, closed, executor.next)
 			}
 			_ = executor.Close()

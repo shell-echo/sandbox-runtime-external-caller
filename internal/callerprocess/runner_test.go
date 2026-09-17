@@ -28,6 +28,7 @@ func TestRunnerUsesSeparateProcessAndCrossChecksPID(t *testing.T) {
 	endpoint := localGatewayEndpoint(t)
 	fixture := testcredentials.NewForGatewayHost(t, "127.0.0.1")
 	providerServer := testprovider.New(t, fixture.ProviderCA, fixture.ProviderServerCertificate(t, "127.0.0.1"), fixture.ProviderAdmissionPublicKeys)
+	providerServer.SetTerminalShell(true)
 	bundle := testBundle(t, fixture.Payloads)
 	defer bundle.Destroy()
 	root := newCallerStateRoot(t)
@@ -232,6 +233,7 @@ func TestRunnerUsesSeparateProcessAndCrossChecksPID(t *testing.T) {
 		t.Fatalf("Provider scenario composition = %#v / %v", counts, serverErrors)
 	}
 	reconstructedProvider := testprovider.New(t, fixture.ProviderCA, fixture.ProviderServerCertificate(t, "127.0.0.1"), fixture.ProviderAdmissionPublicKeys)
+	reconstructedProvider.SetTerminalShell(true)
 	var retainedState callerstate.State
 	if err := json.Unmarshal(after, &retainedState); err != nil {
 		t.Fatal(err)

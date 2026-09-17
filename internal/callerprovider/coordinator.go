@@ -142,7 +142,7 @@ func runInitial(ctx context.Context, store *callerstate.Store, controllerA, cont
 	if err != nil {
 		return nil, ErrPolicy
 	}
-	decidedAt := now().UTC().Format(time.RFC3339Nano)
+	decidedAt := policyDecisionAt(now())
 	if err := store.BindCapabilities(capabilitiesA.ProviderRevisionID, rawA, policyDigest, decidedAt); err != nil {
 		return nil, ErrLifecycle
 	}
@@ -156,7 +156,7 @@ func runInitial(ctx context.Context, store *callerstate.Store, controllerA, cont
 		return nil, err
 	}
 	operation, err := controllerA.client.CreateSandbox(ctx, request, admission)
-	if err != nil || operation.Status != "accepted" {
+	if err != nil || !successfulMutationStatus(operation.Status) {
 		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	descriptor := provider.ReadDescriptor{
@@ -298,13 +298,17 @@ func createRequest(ctx context.Context, state callerstate.State, capabilities pr
 			WorkspaceID: state.Plan.WorkspaceID, BranchID: state.Plan.BranchID, ProviderResolutionID: state.Plan.ProviderResolutionID,
 			ProviderRevisionID: capabilities.ProviderRevisionID,
 			Image:              provider.Image{Reference: ImageReference, Digest: ImageDigest}, RuntimeProfile: RuntimeProfileID,
-			Resources:            provider.Resources{CPUMillis: 500, MemoryBytes: 268435456, EphemeralStorageBytes: 268435456, PIDsLimit: 64},
-			RequiredCapabilities: []provider.CapabilityRequirement{{ID: "sandbox.exec", Version: "1.0.0", Profile: ExecProfileID}, {ID: "sandbox.terminal", Version: "1.0.0", Profile: TerminalProfileID}},
-			Network:              provider.NetworkPolicy{Mode: "none"},
-			Workspace:            provider.WorkspacePolicy{Mode: "ephemeral", BaseRevisionID: state.Plan.WorkspaceID, BaseRevisionDigest: EmptyBaseDigest, BaseWorkspaceHeadVersion: 0, CommitMode: "read_only", MountPath: "/workspace"},
-			Lease:                provider.LeasePolicy{ExpiresAt: now.Add(time.Duration(leaseSeconds) * time.Second).UTC().Format(time.RFC3339Nano)},
-			Security:             provider.SecurityPolicy{PrivilegeLevel: "unprivileged", RootFilesystem: "read_only", ServiceAccountMode: "none", SeccompProfile: "runtime-default"},
-			SandboxSlotKey:       SandboxSlotKey, AgentRunID: state.Plan.RunID,
+			Resources: provider.Resources{CPUMillis: 500, MemoryBytes: 268435456, EphemeralStorageBytes: 268435456, PIDsLimit: 64},
+			RequiredCapabilities: []provider.CapabilityRequirement{
+				{ID: "sandbox.exec", Version: "1.0.0", Profile: ExecProfileID},
+				{ID: "sandbox.terminal", Version: "1.0.0", Profile: TerminalProfileID},
+				{ID: "sandbox.terminal-connect", Version: "1.0.0", Profile: TerminalConnectProfileID},
+			},
+			Network:        provider.NetworkPolicy{Mode: "none"},
+			Workspace:      provider.WorkspacePolicy{Mode: "ephemeral", BaseRevisionID: state.Plan.WorkspaceID, BaseRevisionDigest: EmptyBaseDigest, BaseWorkspaceHeadVersion: 0, CommitMode: "read_only", MountPath: "/workspace"},
+			Lease:          provider.LeasePolicy{ExpiresAt: now.Add(time.Duration(leaseSeconds) * time.Second).UTC().Format(time.RFC3339Nano)},
+			Security:       provider.SecurityPolicy{PrivilegeLevel: "unprivileged", RootFilesystem: "read_only", ServiceAccountMode: "none", SeccompProfile: "runtime-default"},
+			SandboxSlotKey: SandboxSlotKey, AgentRunID: state.Plan.RunID,
 		},
 	}
 	return provider.BindCreateRequest(request)
@@ -366,7 +370,7 @@ func buildAdmissionForTenant(value *access, state callerstate.State, binding pro
 	if state.Provider == nil {
 		return provider.Admission{}, ErrPolicy
 	}
-	issuedAt := now.UTC().Add(-time.Second)
+	issuedAt := now.UTC().Truncate(time.Second)
 	expiresAt := now.UTC().Add(60 * time.Second)
 	deadline, err := time.Parse(time.RFC3339Nano, binding.DeadlineAt)
 	if err != nil || !deadline.After(now) {
@@ -409,6 +413,13 @@ func buildAdmissionForTenant(value *access, state callerstate.State, binding pro
 		return provider.Admission{}, ErrPolicy
 	}
 	return admission, nil
+}
+
+// Provider admission claims encode time as integer Unix seconds. Persist the
+// caller policy decision at the same precision so a token issued in the
+// decision second cannot appear to predate its own policy authority.
+func policyDecisionAt(now time.Time) string {
+	return now.UTC().Truncate(time.Second).Format(time.RFC3339)
 }
 
 func waitOperation(ctx context.Context, value *access, state callerstate.State, descriptor provider.ReadDescriptor, expectedType string, now func() time.Time) error {

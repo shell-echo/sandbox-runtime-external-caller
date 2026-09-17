@@ -113,6 +113,51 @@ func TestCreateAndLifecycleReadsAreExactlyBound(t *testing.T) {
 	}
 }
 
+func TestCreateAcceptsOnlySuccessfulIdempotencyProgressStates(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	requestDocument, err := BindCreateRequest(testCreateRequest(now))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, _ := testSigner(t)
+	admission, err := BuildAdmission(testAuthority(), testCreateBinding(requestDocument, now), signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		status string
+		valid  bool
+	}{
+		{status: "accepted", valid: true},
+		{status: "running", valid: true},
+		{status: "succeeded", valid: true},
+		{status: "failed"},
+		{status: "cancelled"},
+		{status: "outcome_unknown"},
+	} {
+		t.Run(test.status, func(t *testing.T) {
+			client, err := NewClient("https://provider.example", roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return jsonResponse(t, http.StatusAccepted, testOperation(test.status, now)), nil
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.now = func() time.Time { return now }
+			operation, err := client.CreateSandbox(context.Background(), requestDocument, admission)
+			if test.valid {
+				if err != nil || operation.Status != test.status {
+					t.Fatalf("CreateSandbox() = %#v, %v", operation, err)
+				}
+				return
+			}
+			if !errors.Is(err, ErrInvalidContractDocument) {
+				t.Fatalf("CreateSandbox() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestClientRejectsTamperingBeforeTransport(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	requestDocument, err := BindCreateRequest(testCreateRequest(now))

@@ -2,10 +2,8 @@ package callerprovider
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-	"io"
 	"net"
 	"net/http"
 	"reflect"
@@ -78,17 +76,8 @@ func (executor *InitialScenarioExecutor) executeGatewayGrantExpiry(ctx context.C
 	if !ok || deadlineConnection.SetDeadline(minTime(deadline, grantExpiry.Add(gatewayExpiryCloseGrace))) != nil {
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
-	challenge := make([]byte, terminalChallengeBytes)
-	received := make([]byte, terminalChallengeBytes)
-	if _, err := rand.Read(challenge); err != nil {
-		return protocol.ScenarioResultData{}, ErrInitialScenario
-	}
-	challengeDigest := sha256.Sum256(challenge)
-	writeErr := writeScenarioBytes(connection, challenge)
-	_, readErr := io.ReadFull(connection, received)
-	initiallyAuthorized := writeErr == nil && readErr == nil && reflect.DeepEqual(received, challenge) && challengeDigest != ([sha256.Size]byte{}) && executor.now().Before(grantExpiry)
-	clear(challenge)
-	clear(received)
+	challengeDigest, challengeErr := runTerminalChallenge(connection)
+	initiallyAuthorized := challengeErr == nil && challengeDigest != ([sha256.Size]byte{}) && executor.now().Before(grantExpiry)
 	if !initiallyAuthorized {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}

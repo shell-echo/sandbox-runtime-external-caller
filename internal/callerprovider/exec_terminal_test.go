@@ -3,11 +3,13 @@
 package callerprovider
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"io"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,20 +128,28 @@ func (client *fakeClient) ConnectRuntimeSession(_ context.Context, handoff provi
 		return client.connectHook(handoff, admission)
 	}
 	caller, backend := net.Pipe()
-	go func() {
-		defer backend.Close()
-		buffer := make([]byte, 4096)
-		for {
-			count, err := backend.Read(buffer)
-			if count > 0 {
-				_, _ = backend.Write(buffer[:count])
-			}
-			if err != nil {
-				return
+	go serveFakeShell(backend, false)
+	return caller, nil
+}
+
+func serveFakeShell(backend io.ReadWriteCloser, appendUnexpected bool) {
+	defer backend.Close()
+	reader := bufio.NewReader(backend)
+	for {
+		line, err := reader.ReadString('\n')
+		if markerStart := strings.Index(line, "SRC-ROUNDTRIP-"); markerStart >= 0 {
+			const markerLength = len("SRC-ROUNDTRIP-") + 32
+			if len(line) >= markerStart+markerLength {
+				_, _ = io.WriteString(backend, "\r\n"+line[markerStart:markerStart+markerLength]+"\r\n")
+				if appendUnexpected {
+					_, _ = io.WriteString(backend, "unexpected-pre-expiry-byte")
+				}
 			}
 		}
-	}()
-	return caller, nil
+		if err != nil {
+			return
+		}
+	}
 }
 
 func TestExecTerminalBindsObservedDocumentsAndOrderedAdmissions(t *testing.T) {

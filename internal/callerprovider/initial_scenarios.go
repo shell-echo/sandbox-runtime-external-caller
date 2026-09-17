@@ -244,7 +244,7 @@ func (executor *InitialScenarioExecutor) executeReplay(ctx context.Context) (pro
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	operation, freshAttempts, freshTransients, err := submitCreate(ctx, executor.controllerA.client, executor.create, fresh)
-	if err != nil || !sameCreateOperation(operation, executor.operation) || executor.store.ValidateUnchanged() != nil {
+	if err != nil || !sameCreateOperationIdentity(operation, executor.operation) || executor.store.ValidateUnchanged() != nil {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 
@@ -305,6 +305,17 @@ func sameCreateOperation(left, right provider.ProviderOperation) bool {
 	return left.OperationID == right.OperationID && left.AttemptID == right.AttemptID && left.FencingToken == right.FencingToken && left.SandboxID == right.SandboxID && left.Type == right.Type && left.Status == right.Status
 }
 
+func sameCreateOperationIdentity(left, right provider.ProviderOperation) bool {
+	if left.OperationID != right.OperationID || left.AttemptID != right.AttemptID || left.FencingToken != right.FencingToken || left.SandboxID != right.SandboxID || left.Type != right.Type {
+		return false
+	}
+	return successfulMutationStatus(left.Status)
+}
+
+func successfulMutationStatus(status string) bool {
+	return status == "accepted" || status == "running" || status == "succeeded"
+}
+
 func (executor *InitialScenarioExecutor) Close() error {
 	if executor == nil {
 		return nil
@@ -357,7 +368,7 @@ func (executor *InitialScenarioExecutor) executeLifecycleCompletion(ctx context.
 	startedAt := executor.now()
 	deadline, ok := ctx.Deadline()
 	state := executor.store.Snapshot()
-	if !ok || !deadline.After(startedAt.Add(time.Second)) || deadline.Sub(startedAt) > 120*time.Second || state.Stage != callerstate.StageCapabilitiesBound || state.Provider == nil || state.StoreRevision != 2 || !validAccess(executor.controllerA) || !sameCreateOperation(executor.operation, provider.ProviderOperation{
+	if !ok || !deadline.After(startedAt.Add(time.Second)) || deadline.Sub(startedAt) > 120*time.Second || state.Stage != callerstate.StageCapabilitiesBound || state.Provider == nil || state.StoreRevision != 2 || !validAccess(executor.controllerA) || !sameCreateOperationIdentity(executor.operation, provider.ProviderOperation{
 		OperationID: state.Plan.Create.OperationID, AttemptID: state.Plan.Create.AttemptID, FencingToken: createFencingToken,
 		SandboxID: state.Plan.SandboxID, Type: "create", Status: "accepted",
 	}) {
@@ -528,7 +539,7 @@ func (executor *InitialScenarioExecutor) executeCreate(ctx context.Context) (pro
 	if err != nil {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
-	if operation.OperationID != state.Plan.Create.OperationID || operation.AttemptID != state.Plan.Create.AttemptID || operation.FencingToken != createFencingToken || operation.SandboxID != state.Plan.SandboxID || operation.Type != "create" || operation.Status != "accepted" ||
+	if operation.OperationID != state.Plan.Create.OperationID || operation.AttemptID != state.Plan.Create.AttemptID || operation.FencingToken != createFencingToken || operation.SandboxID != state.Plan.SandboxID || operation.Type != "create" || !successfulMutationStatus(operation.Status) ||
 		admission.Context.TenantID != state.Plan.TenantAID || admission.Context.WorkOrderID != state.Plan.WorkOrderAID || admission.Context.RequestDigest != request.RequestDigest || admission.Context.OperationID != request.OperationID || admission.Context.AttemptID != request.AttemptID || admission.Context.FencingToken != request.FencingToken || executor.store.ValidateUnchanged() != nil {
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}

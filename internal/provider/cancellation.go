@@ -41,7 +41,7 @@ func (c *Client) CancelExec(ctx context.Context, sandboxID string, requestDocume
 		return ProviderOperation{}, err
 	}
 	var operation ProviderOperation
-	if decodeProviderOperation(response, &operation) != nil || operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != sandboxID || operation.Type != "cancel_exec" || operation.Status != "accepted" {
+	if decodeProviderOperation(response, &operation) != nil || operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != sandboxID || operation.Type != "cancel_exec" || !successfulMutationResponseStatus(operation.Status) {
 		return ProviderOperation{}, ErrInvalidContractDocument
 	}
 	return operation, nil

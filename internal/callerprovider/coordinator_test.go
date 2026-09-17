@@ -132,6 +132,7 @@ func (client *fakeClient) GetArtifactStagingEvidence(_ context.Context, descript
 	evidence := client.artifactEvidence
 	if evidence.OperationID == "" {
 		now := time.Now().UTC()
+		retention := time.Duration(client.artifacts[len(client.artifacts)-1].RetentionSeconds) * time.Second
 		evidence = provider.ArtifactStagingEvidence{
 			OperationID: descriptor.OperationID, AttemptID: descriptor.AttemptID, FencingToken: descriptor.FencingToken, SandboxID: descriptor.SandboxID,
 			ArtifactReference: client.artifacts[len(client.artifacts)-1].ArtifactReference, StagingReference: "ref:staging:synthetic", Status: "staged",
@@ -139,7 +140,7 @@ func (client *fakeClient) GetArtifactStagingEvidence(_ context.Context, descript
 			TenantBindingCheck: provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:tenant"},
 			ActiveContentCheck: provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:active"},
 			MalwareCheck:       provider.ArtifactCheck{Status: "passed", CheckedAt: now.Format(time.RFC3339Nano), EvidenceReference: "ref:check:malware"},
-			ObservedAt:         now.Format(time.RFC3339Nano), ExpiresAt: now.Add(time.Hour).Format(time.RFC3339Nano), EvidenceDigest: "sha256:" + strings.Repeat("e", 64),
+			ObservedAt:         now.Format(time.RFC3339Nano), ExpiresAt: now.Add(retention).Format(time.RFC3339Nano), EvidenceDigest: "sha256:" + strings.Repeat("e", 64),
 		}
 	}
 	if client.artifactEvidenceHook != nil {
@@ -202,7 +203,14 @@ func TestInitialBindsExactCapabilitiesAndSucceededLifecycle(t *testing.T) {
 	if request.Spec.SandboxID != state.Plan.SandboxID || request.Spec.TenantID != state.Plan.TenantAID || request.Spec.RuntimeProfile != RuntimeProfileID || request.Spec.Image.Reference != ImageReference || request.Spec.Image.Digest != ImageDigest || request.Spec.Resources.CPUMillis != 500 || request.Spec.Resources.PIDsLimit != 64 || request.RequestDigest == "" {
 		t.Fatalf("caller create request = %#v", request)
 	}
+	if len(request.Spec.RequiredCapabilities) != 3 || request.Spec.RequiredCapabilities[2] != (provider.CapabilityRequirement{ID: "sandbox.terminal-connect", Version: "1.0.0", Profile: TerminalConnectProfileID}) {
+		t.Fatalf("caller create capability closure = %#v", request.Spec.RequiredCapabilities)
+	}
 	seenJTI := map[string]struct{}{}
+	decision, err := time.Parse(time.RFC3339Nano, state.Provider.PolicyDecidedAt)
+	if err != nil || !decision.Equal(base.Truncate(time.Second)) {
+		t.Fatalf("policy decision time = %q, want %s", state.Provider.PolicyDecidedAt, base.Truncate(time.Second).Format(time.RFC3339))
+	}
 	for _, admission := range clients["controller_a"].admissions {
 		if admission.Context.PolicyDigest != state.Provider.PolicyDigest || admission.Context.PolicyDecidedAt != state.Provider.PolicyDecidedAt {
 			t.Fatalf("admission policy binding = %#v", admission.Context)
@@ -212,6 +220,9 @@ func TestInitialBindsExactCapabilitiesAndSucceededLifecycle(t *testing.T) {
 		}
 		if admission.Claims.ExpiresAt > base.Add(5*time.Second).Unix() {
 			t.Fatalf("admission expiry %d exceeds phase deadline", admission.Claims.ExpiresAt)
+		}
+		if time.Unix(admission.Claims.NotBefore, 0).Before(decision) {
+			t.Fatalf("admission not-before %d predates policy decision %s", admission.Claims.NotBefore, state.Provider.PolicyDecidedAt)
 		}
 		seenJTI[admission.Claims.JTI] = struct{}{}
 	}

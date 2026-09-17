@@ -35,7 +35,7 @@ func (executor *InitialScenarioExecutor) executeExecCancellation(ctx context.Con
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	acceptedExec, startAttempts, startTransients, err := submitExec(ctx, executor.controllerA.client, state.Plan.SandboxID, request, startAdmission)
-	if err != nil || acceptedExec.Status != "accepted" || !operationMatches(acceptedExec, target, "exec") {
+	if err != nil || acceptedExec.Status != "accepted" && acceptedExec.Status != "running" || !operationMatches(acceptedExec, target, "exec") {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 
@@ -49,7 +49,7 @@ func (executor *InitialScenarioExecutor) executeExecCancellation(ctx context.Con
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	acceptedCancel, cancelAttempts, cancelTransients, err := submitCancelExec(ctx, executor.controllerA.client, state.Plan.SandboxID, cancelRequest, cancelAdmission)
-	if err != nil || acceptedCancel.Status != "accepted" || !operationMatches(acceptedCancel, cancelDescriptor, "cancel_exec") {
+	if err != nil || !successfulMutationStatus(acceptedCancel.Status) || !operationMatches(acceptedCancel, cancelDescriptor, "cancel_exec") {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 	cancelOperation, cancelReadAttempts, cancelReadTransients, err := pollExpectedOperationStatus(ctx, executor.controllerA, state, cancelDescriptor, "cancel_exec", "succeeded", executor.now)

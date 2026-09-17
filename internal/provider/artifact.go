@@ -31,7 +31,7 @@ func (c *Client) StageArtifact(ctx context.Context, sandboxID string, requestDoc
 	if err := decodeProviderOperation(response, &operation); err != nil {
 		return ProviderOperation{}, err
 	}
-	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != sandboxID || operation.Type != "artifact_stage" || operation.Status != "accepted" {
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != sandboxID || operation.Type != "artifact_stage" || !successfulMutationResponseStatus(operation.Status) {
 		return ProviderOperation{}, ErrInvalidContractDocument
 	}
 	return operation, nil

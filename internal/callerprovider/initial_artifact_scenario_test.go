@@ -43,6 +43,10 @@ func TestArtifactStagingBindsCallerTruthAndFullEvidenceDocument(t *testing.T) {
 	if request.ArtifactReference != "artifact-ref:caller/"+store.Snapshot().Plan.RunID || request.SourcePath != artifactSourcePath || request.ExpectedDigest != artifactDigest || request.ExpectedMediaType != artifactMediaType || request.MaxBytes != artifactSizeBytes || request.RequestDigest == "" {
 		t.Fatalf("caller artifact request = %#v", request)
 	}
+	requestDeadline, deadlineErr := time.Parse(time.RFC3339Nano, request.DeadlineAt)
+	if deadlineErr != nil || request.RetentionSeconds < 1 || !requestDeadline.After(time.Now().Add(time.Duration(request.RetentionSeconds)*time.Second)) {
+		t.Fatalf("artifact retention is not bounded by deadline: %#v, %v", request, deadlineErr)
+	}
 	evidenceDigest, _ := jcs.Digest(executor.artifactEvidence)
 	state := store.Snapshot()
 	if state.Stage != callerstate.StageInitialComplete || state.StoreRevision != 6 || state.Artifact == nil || state.Artifact.Operation.FencingToken != artifactFencingToken || state.Artifact.EvidenceDigest != evidenceDigest || executor.next != 13 {

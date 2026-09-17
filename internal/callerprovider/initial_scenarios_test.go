@@ -200,6 +200,19 @@ func TestReplaySemanticsRejectsExactJTIAcceptedAsIdempotency(t *testing.T) {
 	}
 }
 
+func TestReplayIdentityAllowsCurrentOperationProgressButRejectsDifferentOperation(t *testing.T) {
+	original := provider.ProviderOperation{OperationID: "operation-1", AttemptID: "attempt-1", FencingToken: 1, SandboxID: "sandbox-1", Type: "create", Status: "accepted"}
+	progressed := original
+	progressed.Status = "succeeded"
+	if !sameCreateOperationIdentity(progressed, original) {
+		t.Fatal("idempotency replay rejected the same progressed operation")
+	}
+	progressed.OperationID = "operation-2"
+	if sameCreateOperationIdentity(progressed, original) {
+		t.Fatal("idempotency replay accepted a different operation")
+	}
+}
+
 func TestLifecycleCompletionPollsWithFreshAdmissionAndBindsOnlyReadyGenerationOne(t *testing.T) {
 	store := initialStore(t)
 	defer store.Close()

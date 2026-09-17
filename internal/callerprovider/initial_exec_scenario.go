@@ -34,7 +34,7 @@ func (executor *InitialScenarioExecutor) executeExecResultUsage(ctx context.Cont
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	operation, submitAttempts, submitTransients, err := submitExec(ctx, executor.controllerA.client, state.Plan.SandboxID, request, admission)
-	if err != nil || operation.Status != "accepted" || !operationMatches(operation, descriptor, "exec") {
+	if err != nil || !successfulMutationStatus(operation.Status) || !operationMatches(operation, descriptor, "exec") {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 	operation, operationAttempts, operationTransients, err := pollExpectedOperation(ctx, executor.controllerA, state, descriptor, "exec", executor.now)

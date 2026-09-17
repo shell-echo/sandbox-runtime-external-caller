@@ -57,6 +57,7 @@ func runAdapterIdentityCase(t *testing.T, executable string, valid bool) {
 	requirements := credentials.Requirements()
 	fixture := testcredentials.NewForGatewayHost(t, "127.0.0.1")
 	providerServer := testprovider.New(t, fixture.ProviderCA, fixture.ProviderServerCertificate(t, "127.0.0.1"), fixture.ProviderAdmissionPublicKeys)
+	providerServer.SetTerminalShell(true)
 	payloads := fixture.Payloads
 	if !valid {
 		payloads["gateway-server"] = []byte(`{"private_key_pem":"synthetic-secret-marker"}`)
@@ -374,6 +375,7 @@ func runReconstructionAdapterProcess(t *testing.T, executable, gatewayEndpoint, 
 	t.Helper()
 	fixture := testcredentials.NewForGatewayHost(t, "127.0.0.1")
 	providerServer := testprovider.New(t, fixture.ProviderCA, fixture.ProviderServerCertificate(t, "127.0.0.1"), fixture.ProviderAdmissionPublicKeys)
+	providerServer.SetTerminalShell(true)
 	var retainedState callerstate.State
 	if err := json.Unmarshal(stateBefore, &retainedState); err != nil {
 		t.Fatal(err)

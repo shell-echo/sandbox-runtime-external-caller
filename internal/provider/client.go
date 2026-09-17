@@ -119,10 +119,17 @@ func (c *Client) CreateSandbox(ctx context.Context, requestDocument CreateSandbo
 	if err := decodeProviderOperation(response, &operation); err != nil {
 		return ProviderOperation{}, err
 	}
-	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != bound.Spec.SandboxID || operation.Type != "create" || operation.Status != "accepted" {
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != bound.Spec.SandboxID || operation.Type != "create" || !successfulMutationResponseStatus(operation.Status) {
 		return ProviderOperation{}, ErrInvalidContractDocument
 	}
 	return operation, nil
+}
+
+// A successful create mutation normally returns accepted. An idempotency replay
+// may return the same logical operation after it has already advanced. Terminal
+// failure states are not successful mutation responses and remain rejected.
+func successfulMutationResponseStatus(status string) bool {
+	return status == "accepted" || status == "running" || status == "succeeded"
 }
 
 func (c *Client) GetSandboxStatus(ctx context.Context, descriptor ReadDescriptor, admission Admission) (SandboxStatus, error) {
@@ -201,7 +208,7 @@ func (c *Client) CreateExec(ctx context.Context, sandboxID string, requestDocume
 	if err := decodeProviderOperation(response, &operation); err != nil {
 		return ProviderOperation{}, err
 	}
-	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "exec" || operation.Status != "accepted" {
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "exec" || !successfulMutationResponseStatus(operation.Status) {
 		return ProviderOperation{}, ErrInvalidContractDocument
 	}
 	return operation, nil
@@ -253,7 +260,7 @@ func (c *Client) OpenRuntimeSession(ctx context.Context, sandboxID string, reque
 	if err := decodeProviderOperation(response, &operation); err != nil {
 		return ProviderOperation{}, err
 	}
-	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "open_runtime_session" || operation.Status != "accepted" {
+	if operation.OperationID != bound.OperationID || operation.AttemptID != bound.AttemptID || operation.FencingToken != bound.FencingToken || operation.SandboxID != admission.Context.SandboxID || operation.Type != "open_runtime_session" || !successfulMutationResponseStatus(operation.Status) {
 		return ProviderOperation{}, ErrInvalidContractDocument
 	}
 	return operation, nil

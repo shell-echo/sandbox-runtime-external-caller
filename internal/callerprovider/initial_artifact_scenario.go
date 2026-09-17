@@ -37,7 +37,7 @@ func (executor *InitialScenarioExecutor) executeArtifactStaging(ctx context.Cont
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	operation, stageAttempts, stageTransients, err := submitArtifact(ctx, executor.controllerA.client, state.Plan.SandboxID, request, admission)
-	if err != nil || !operationMatches(operation, descriptor, "artifact_stage") || operation.Status != "accepted" {
+	if err != nil || !operationMatches(operation, descriptor, "artifact_stage") || !successfulMutationStatus(operation.Status) {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 	operation, operationAttempts, operationTransients, err := pollExpectedOperation(ctx, executor.controllerA, state, descriptor, "artifact_stage", executor.now)
@@ -83,11 +83,18 @@ func artifactRequest(ctx context.Context, state callerstate.State, lease string,
 	if err != nil {
 		return provider.ArtifactStagingRequest{}, err
 	}
+	// Provider artifact retention must end no later than the mutation deadline.
+	// Leave a bounded transport/validation margin instead of deriving an expiry
+	// that is already invalid by the time the Provider evaluates it.
+	retentionSeconds := int64(deadline.Sub(now)/time.Second) - 1
+	if retentionSeconds < 1 {
+		return provider.ArtifactStagingRequest{}, ErrInitialScenario
+	}
 	return provider.BindArtifactStagingRequest(provider.ArtifactStagingRequest{
 		OperationID: state.Plan.Artifact.OperationID, AttemptID: state.Plan.Artifact.AttemptID, FencingToken: artifactFencingToken,
 		IdempotencyKey: state.Plan.Artifact.IdempotencyKey, DeadlineAt: deadline.Format(time.RFC3339Nano), ExpectedGeneration: 1,
 		ArtifactReference: "artifact-ref:caller/" + state.Plan.RunID, SourcePath: artifactSourcePath, ExpectedDigest: artifactDigest,
-		ExpectedMediaType: artifactMediaType, MaxBytes: artifactSizeBytes, RetentionSeconds: 3600,
+		ExpectedMediaType: artifactMediaType, MaxBytes: artifactSizeBytes, RetentionSeconds: retentionSeconds,
 	})
 }
 

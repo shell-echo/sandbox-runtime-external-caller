@@ -25,7 +25,7 @@ func runExecTerminal(ctx context.Context, store *callerstate.Store, controller *
 		return nil, err
 	}
 	operation, err := controller.client.CreateExec(ctx, state.Plan.SandboxID, request, admission)
-	if err != nil || operation.Status != "accepted" || !operationMatches(operation, descriptor, "exec") {
+	if err != nil || !successfulMutationStatus(operation.Status) || !operationMatches(operation, descriptor, "exec") {
 		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	if err := waitOperation(ctx, controller, state, descriptor, "exec", now); err != nil {
@@ -79,7 +79,7 @@ func runExecTerminal(ctx context.Context, store *callerstate.Store, controller *
 		return nil, err
 	}
 	operation, err = controller.client.OpenRuntimeSession(ctx, state.Plan.SandboxID, session, admission)
-	if err != nil || operation.Status != "accepted" || !operationMatches(operation, descriptor, "open_runtime_session") {
+	if err != nil || !successfulMutationStatus(operation.Status) || !operationMatches(operation, descriptor, "open_runtime_session") {
 		return nil, preserveContext(ctx, ErrLifecycle)
 	}
 	if err := waitOperation(ctx, controller, state, descriptor, "open_runtime_session", now); err != nil {

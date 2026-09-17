@@ -31,7 +31,7 @@ func (executor *InitialScenarioExecutor) executeTerminalSession(ctx context.Cont
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
 	accepted, submitAttempts, submitTransients, err := submitRuntimeSession(ctx, executor.controllerA.client, state.Plan.SandboxID, request, admission)
-	if err != nil || accepted.Status != "accepted" || !operationMatches(accepted, descriptor, "open_runtime_session") {
+	if err != nil || !successfulMutationStatus(accepted.Status) || !operationMatches(accepted, descriptor, "open_runtime_session") {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 	operation, operationAttempts, operationTransients, err := pollExpectedOperation(ctx, executor.controllerA, state, descriptor, "open_runtime_session", executor.now)

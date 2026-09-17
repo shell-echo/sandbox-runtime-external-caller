@@ -99,14 +99,7 @@ func TestGatewayGrantExpiryFailureStopsGatewayWithoutAdvancing(t *testing.T) {
 	}
 	client.connectHook = func(provider.RuntimeSessionHandoff, provider.Admission) (io.ReadWriteCloser, error) {
 		caller, backend := net.Pipe()
-		go func() {
-			defer backend.Close()
-			payload := make([]byte, terminalChallengeBytes)
-			if _, err := io.ReadFull(backend, payload); err == nil {
-				_, _ = backend.Write(payload)
-				_, _ = backend.Write([]byte("unexpected-pre-expiry-byte"))
-			}
-		}()
+		go serveFakeShell(backend, true)
 		return caller, nil
 	}
 	executor.dialGateway = func(ctx context.Context, _ string, _ string, _ *tls.Config) (io.ReadWriteCloser, error) {

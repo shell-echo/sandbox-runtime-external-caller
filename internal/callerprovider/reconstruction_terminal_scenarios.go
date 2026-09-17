@@ -3,10 +3,8 @@ package callerprovider
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
-	"io"
 	"net/http"
 	"reflect"
 	"time"
@@ -111,20 +109,9 @@ func (executor *InitialScenarioExecutor) executeReconstructionReconnect(ctx cont
 		_ = connection.Close()
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
-	challenge := make([]byte, terminalChallengeBytes)
-	received := make([]byte, terminalChallengeBytes)
-	if _, err := rand.Read(challenge); err != nil {
-		_ = connection.Close()
-		return protocol.ScenarioResultData{}, ErrInitialScenario
-	}
-	digest := sha256.Sum256(challenge)
-	writeErr := writeScenarioBytes(connection, challenge)
-	_, readErr := io.ReadFull(connection, received)
+	digest, roundTripErr := runTerminalChallenge(connection)
 	closeErr := connection.Close()
-	matched := reflect.DeepEqual(challenge, received)
-	clear(challenge)
-	clear(received)
-	if writeErr != nil || readErr != nil || closeErr != nil || !matched || digest == ([sha256.Size]byte{}) || ctx.Err() != nil ||
+	if roundTripErr != nil || closeErr != nil || digest == ([sha256.Size]byte{}) || ctx.Err() != nil ||
 		executor.store.ValidateUnchanged() != nil || !reflect.DeepEqual(executor.store.Snapshot(), state) {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}

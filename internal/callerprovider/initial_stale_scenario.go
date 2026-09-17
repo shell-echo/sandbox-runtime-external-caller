@@ -59,7 +59,10 @@ func staleExecRequest(ctx context.Context, state callerstate.State, maxExecSecon
 	if err != nil {
 		return provider.ExecRequest{}, err
 	}
-	request.OperationID = "stale-exec-operation-" + state.Plan.RunID
+	// Fencing is operation-scoped by the Provider Contract. Reuse the prior
+	// logical operation ID with a fresh attempt/JTI so the lower token is
+	// compared against that operation's established high-water mark.
+	request.OperationID = state.Plan.Exec.OperationID
 	request.AttemptID = "stale-exec-attempt-" + state.Plan.RunID
 	request.IdempotencyKey = "stale-exec-idempotency-" + state.Plan.RunID
 	request.FencingToken = execFencingToken - 1

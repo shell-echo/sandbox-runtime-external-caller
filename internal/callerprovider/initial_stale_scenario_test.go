@@ -26,7 +26,7 @@ func TestStaleFencingRejectsBeforeDispatchWithoutRetryOrStateChange(t *testing.T
 		if call != 2 {
 			t.Fatalf("unexpected stale exec call = %d", call)
 		}
-		if request.FencingToken >= accepted.FencingToken || request.OperationID == accepted.OperationID || request.AttemptID == accepted.AttemptID || request.IdempotencyKey == accepted.IdempotencyKey || admission.Context.RequestDigest != request.RequestDigest {
+		if request.FencingToken >= accepted.FencingToken || request.OperationID != accepted.OperationID || request.AttemptID == accepted.AttemptID || request.IdempotencyKey == accepted.IdempotencyKey || admission.Context.RequestDigest != request.RequestDigest {
 			t.Fatalf("stale request/admission = %#v / %#v", request, admission.Context)
 		}
 		return &provider.HTTPError{StatusCode: http.StatusConflict, Document: provider.StandardError{

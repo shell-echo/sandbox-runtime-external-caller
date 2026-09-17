@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -78,6 +79,7 @@ type Server struct {
 	policyDigest            string
 	policyDecided           string
 	terminalCloseAfterWrite bool
+	terminalShell           bool
 	capabilityTransients    map[string]int
 	createTransients        int
 	firstCreateBearer       string
@@ -117,6 +119,12 @@ func (server *Server) SetTerminalCloseAfterWrite(value bool) {
 	server.mu.Lock()
 	server.terminalCloseAfterWrite = value
 	server.mu.Unlock()
+}
+
+func (server *Server) SetTerminalShell(value bool) {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.terminalShell = value
 }
 
 func (server *Server) SetCapabilityTransients(actor string, count int) {
@@ -309,7 +317,18 @@ func (server *Server) serveHTTP(writer http.ResponseWriter, request *http.Reques
 				_ = connection.Close(websocket.StatusUnsupportedData, "unsupported data")
 				return
 			}
-			if err := connection.Write(request.Context(), websocket.MessageBinary, payload); err != nil {
+			server.mu.Lock()
+			shell := server.terminalShell
+			server.mu.Unlock()
+			response, ok := append([]byte(nil), payload...), true
+			if shell {
+				response, ok = syntheticShellResponse(payload)
+			}
+			if !ok {
+				_ = connection.Close(websocket.StatusPolicyViolation, "unsupported command")
+				return
+			}
+			if err := connection.Write(request.Context(), websocket.MessageBinary, response); err != nil {
 				return
 			}
 			server.mu.Lock()
@@ -720,6 +739,26 @@ func (server *Server) serveHTTP(writer http.ResponseWriter, request *http.Reques
 	default:
 		server.reject(writer, "unexpected Provider route", http.StatusNotFound)
 	}
+}
+
+func syntheticShellResponse(command []byte) ([]byte, bool) {
+	const prefix = "printf '\\nSRC-ROUNDTRIP-"
+	const suffix = "\\n'\n"
+	if len(command) != len(prefix)+32+len(suffix) || !bytes.HasPrefix(command, []byte(prefix)) || !bytes.HasSuffix(command, []byte(suffix)) {
+		return nil, false
+	}
+	marker := command[len(prefix) : len(prefix)+32]
+	decoded := make([]byte, 16)
+	if _, err := hex.Decode(decoded, marker); err != nil {
+		return nil, false
+	}
+	clear(decoded)
+	response := make([]byte, 0, len(marker)+17)
+	response = append(response, '\n')
+	response = append(response, "SRC-ROUNDTRIP-"...)
+	response = append(response, marker...)
+	response = append(response, '\n')
+	return response, true
 }
 
 type lifecycleState struct {

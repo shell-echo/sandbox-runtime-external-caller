@@ -117,7 +117,7 @@ func runCapabilityDiscoveryScenario(ctx context.Context, origin string, bundle *
 		protocol.ProfileDigest != "sha256:4effea27fd3d7668b88eeb95c69e19b51556914b7949b1a39ce522b2aec46c14" || protocol.ValidateScenarioResultData("initial", result) != nil {
 		return protocol.ScenarioResultData{}, provider.ProviderCapabilities{}, ErrCapabilityScenario
 	}
-	if store.BindCapabilities(discoveryA.document.ProviderRevisionID, discoveryA.raw, policyDigest, now().UTC().Format(time.RFC3339Nano)) != nil || store.ValidateUnchanged() != nil {
+	if store.BindCapabilities(discoveryA.document.ProviderRevisionID, discoveryA.raw, policyDigest, policyDecisionAt(now())) != nil || store.ValidateUnchanged() != nil {
 		return protocol.ScenarioResultData{}, provider.ProviderCapabilities{}, ErrCapabilityScenario
 	}
 	return result, discoveryA.document, nil

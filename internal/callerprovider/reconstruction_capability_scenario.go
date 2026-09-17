@@ -26,6 +26,11 @@ func (executor *InitialScenarioExecutor) executeReconstructionCapability(ctx con
 		closeAccess(controllerA)
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
+	discovery, err := discoverAdmittedCapabilities(ctx, controllerA.client)
+	if err != nil || validateLockedCapabilitySnapshot(discovery.document) != nil || discovery.document.ProviderRevisionID != state.Provider.ProviderRevisionID || rawDigest(discovery.raw) != state.Provider.CapabilitySnapshotHash {
+		closeAccess(controllerA)
+		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrCapabilityContinuity)
+	}
 	gatewayContext, gatewayCancel := context.WithDeadline(context.Background(), startedAt.Add(reconstructionGatewayLifetime))
 	stopStartupCancellation := context.AfterFunc(ctx, gatewayCancel)
 	service, err := executor.startGateway(gatewayContext, "reconstruction", executor.gatewayEndpoint, executor.bundle)
@@ -46,10 +51,6 @@ func (executor *InitialScenarioExecutor) executeReconstructionCapability(ctx con
 	}()
 	if service.InstallPolicy(ctx, state.Plan.TenantAID, state.Plan.TenantBID) != nil {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
-	}
-	discovery, err := discoverAdmittedCapabilities(ctx, controllerA.client)
-	if err != nil || validateLockedCapabilitySnapshot(discovery.document) != nil || discovery.document.ProviderRevisionID != state.Provider.ProviderRevisionID || rawDigest(discovery.raw) != state.Provider.CapabilitySnapshotHash {
-		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrCapabilityContinuity)
 	}
 	if executor.store.ValidateUnchanged() != nil || !reflect.DeepEqual(executor.store.Snapshot(), state) {
 		return protocol.ScenarioResultData{}, ErrInitialScenario

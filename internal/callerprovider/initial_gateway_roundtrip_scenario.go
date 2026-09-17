@@ -1,11 +1,13 @@
 package callerprovider
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"reflect"
@@ -91,20 +93,9 @@ func (executor *InitialScenarioExecutor) executeGatewayRoundTrip(ctx context.Con
 		_ = connection.Close()
 		return protocol.ScenarioResultData{}, ErrInitialScenario
 	}
-	challenge := make([]byte, terminalChallengeBytes)
-	received := make([]byte, terminalChallengeBytes)
-	if _, err := rand.Read(challenge); err != nil {
-		_ = connection.Close()
-		return protocol.ScenarioResultData{}, ErrInitialScenario
-	}
-	challengeDigest := sha256.Sum256(challenge)
-	writeErr := writeScenarioBytes(connection, challenge)
-	_, readErr := io.ReadFull(connection, received)
+	challengeDigest, roundTripErr := runTerminalChallenge(connection)
 	closeErr := connection.Close()
-	matched := reflect.DeepEqual(received, challenge)
-	clear(challenge)
-	clear(received)
-	if writeErr != nil || readErr != nil || closeErr != nil || !matched || challengeDigest == ([sha256.Size]byte{}) {
+	if roundTripErr != nil || closeErr != nil || challengeDigest == ([sha256.Size]byte{}) {
 		return protocol.ScenarioResultData{}, preserveContext(ctx, ErrInitialScenario)
 	}
 	if ctx.Err() != nil || service.Stop(ctx) != nil {
@@ -186,4 +177,41 @@ func writeScenarioBytes(writer io.Writer, payload []byte) error {
 		payload = payload[written:]
 	}
 	return nil
+}
+
+func runTerminalChallenge(stream io.ReadWriter) ([sha256.Size]byte, error) {
+	var entropy [16]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return [sha256.Size]byte{}, ErrInitialScenario
+	}
+	digest := sha256.Sum256(entropy[:])
+	marker := "SRC-ROUNDTRIP-" + hex.EncodeToString(entropy[:])
+	clear(entropy[:])
+	command := []byte("printf '\\n" + marker + "\\n'\n")
+	if writeScenarioBytes(stream, command) != nil {
+		clear(command)
+		return [sha256.Size]byte{}, ErrInitialScenario
+	}
+	clear(command)
+	wantLF := []byte("\n" + marker + "\n")
+	wantCRLF := []byte("\r\n" + marker + "\r\n")
+	observed := make([]byte, 0, 4096)
+	buffer := make([]byte, 1024)
+	for len(observed) < 64<<10 {
+		count, err := stream.Read(buffer)
+		if count > 0 {
+			observed = append(observed, buffer[:count]...)
+			if bytes.Contains(observed, wantLF) || bytes.Contains(observed, wantCRLF) {
+				clear(buffer)
+				clear(observed)
+				return digest, nil
+			}
+		}
+		if err != nil || count == 0 {
+			break
+		}
+	}
+	clear(buffer)
+	clear(observed)
+	return [sha256.Size]byte{}, ErrInitialScenario
 }
